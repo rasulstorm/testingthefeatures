@@ -1,0 +1,29 @@
+{
+	"project_info": {
+		"project_number": "789974726116",
+		"project_id": "iss-cms",
+		"storage_bucket": "iss-cms.firebasestorage.app"
+	},
+	"client": [
+		{
+			"client_info": {
+				"mobilesdk_app_id": "1:789974726116:android:a5f99224fc8ec3b8a143f1",
+				"android_client_info": {
+					"package_name": "kz.iss.app"
+				}
+			},
+			"oauth_client": [],
+			"api_key": [
+				{
+					"current_key": "AIzaSyCVdkJ_-pP4aoAwoWdy3FvHR-jgNWKI8Xs"
+				}
+			],
+			"services": {
+				"appinvite_service": {
+					"other_platform_oauth_client": []
+				}
+			}
+		}
+	],
+	"configuration_version": "1"
+}
