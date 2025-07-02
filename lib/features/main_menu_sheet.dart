@@ -1,6 +1,8 @@
+// lib/features/main_menu_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ISS/appColor.dart';
+import 'package:ISS/features/about_us/about_us_screen.dart'; // Импортируем новую страницу "О нас"
 
 class MainMenuSheet extends StatelessWidget {
   const MainMenuSheet({super.key});
@@ -16,33 +18,59 @@ class MainMenuSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Ручка для закрытия меню (опционально, если она нужна)
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              width: 40,
+              height: 5,
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: AppColors.text, // Используем цвет текста для ручки
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12), // Отступ после ручки
+
           _buildMenuItem(
             context,
             icon: Icons.security,
             label: 'Панель охраны',
-            route: '/security-control',
+            targetRoute: '/security-control', // Используем targetRoute для go()
           ),
           const SizedBox(height: 12),
           _buildMenuItem(
             context,
             icon: Icons.person,
             label: 'Профиль',
-            route: '/settings',
+            targetRoute: '/settings', // Используем targetRoute для go()
           ),
           const SizedBox(height: 12),
           _buildMenuItem(
             context,
             icon: Icons.payment,
             label: 'Оплата',
-            route: '/dashboard',
+            targetRoute: '/dashboard', // Используем targetRoute для go()
           ),
           const SizedBox(height: 12),
           _buildMenuItem(
             context,
             icon: Icons.notifications,
             label: 'Уведомления',
-            route: '/notifications',
+            targetRoute: '/notifications', // Используем targetRoute для go()
           ),
+          const SizedBox(height: 12),
+
+          // ИЗМЕНЕННЫЙ ПУНКТ МЕНЮ: О нас
+          _buildMenuItem(
+            context,
+            icon: Icons.info_outline, // Иконка для "О нас"
+            label: 'О нас',
+            targetRoute: '/about-us', // Новый маршрут
+            usePush: true, // Указываем, что для этого пункта нужно использовать push()
+          ),
+          const SizedBox(height: 12), // Отступ после нового пункта
         ],
       ),
     );
@@ -52,12 +80,19 @@ class MainMenuSheet extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String label,
-    required String route,
+    required String targetRoute, // Изменил имя параметра для ясности
+    bool usePush = false, // Новый параметр для управления push/go
+    Color iconColor = AppColors.text, // Цвет иконки по умолчанию
+    Color labelColor = AppColors.heading, // Цвет текста по умолчанию
   }) {
     return InkWell(
       onTap: () {
-        Navigator.of(context).pop();
-        context.go(route);
+        Navigator.of(context).pop(); // Закрыть bottom sheet
+        if (usePush) {
+          context.push(targetRoute); // ИСПОЛЬЗУЕМ PUSH ДЛЯ "О НАС"
+        } else {
+          context.go(targetRoute); // Для остальных пунктов используем go
+        }
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
@@ -68,11 +103,11 @@ class MainMenuSheet extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.text),
+            Icon(icon, color: iconColor), // Используем iconColor
             const SizedBox(width: 16),
             Text(
               label,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: TextStyle(color: labelColor, fontSize: 16), // Используем labelColor
             ),
           ],
         ),

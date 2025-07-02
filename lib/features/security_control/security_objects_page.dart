@@ -2,13 +2,15 @@ import 'package:ISS/features/main_menu_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../appColor.dart';
-import './security_provider.dart';
-import 'object_modal_bottom_sheet.dart';
+import 'package:ISS/appColor.dart';
+import 'package:ISS/features/security_control/security_provider.dart'; // Ensure this path is correct
+import 'package:ISS/features/security_control/object_modal_bottom_sheet.dart';
+import 'package:ISS/models/hub_models.dart'; // Import the new models
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+// Your existing dioGetWithRefresh and sendFcmTokenToBackend functions remain unchanged
 Future<Response> dioGetWithRefresh(String path) async {
   final prefs = await SharedPreferences.getInstance();
   final refreshToken = prefs.getString('refreshToken');
@@ -27,7 +29,7 @@ Future<Response> dioGetWithRefresh(String path) async {
   await prefs.setString('accessToken', newAccessToken);
   await prefs.setString('refreshToken', newRefreshToken);
 
-  final response = await dio.post(
+  final response = await dio.post( // Changed to post as per getObjects endpoint
     path,
     options: Options(headers: {'Authorization': '$newAccessToken'}),
   );
@@ -52,15 +54,17 @@ Future<void> sendFcmTokenToBackend(String token) async {
   } catch (e) {
     print('Ошибка отправки токена: $e');
     try {
-      final newToken = await dioGetWithRefresh(
-        '/user/notificationToken?token=$token',
+      // Adjusted to use dio.post for notificationToken
+      final newTokenResponse = await dioGetWithRefresh(
+        '/user/notificationToken?token=$token', // This will now correctly call POST via dioGetWithRefresh
       );
-      print(' Повторная отправка успешна: ${newToken.statusCode}');
+      print(' Повторная отправка успешна: ${newTokenResponse.statusCode}');
     } catch (refreshError) {
       print('Ошибка при повторной отправке после refresh: $refreshError');
     }
   }
 }
+
 
 class SecurityObjectsPage extends ConsumerStatefulWidget {
   const SecurityObjectsPage({super.key});
@@ -92,14 +96,18 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
 
     FirebaseMessaging.instance.getToken().then((token) {
       print('📲 FCM Token: $token');
-      sendFcmTokenToBackend(token!);
+      if (token != null) { // Ensure token is not null before sending
+        sendFcmTokenToBackend(token);
+      }
     });
 
     FirebaseMessaging.instance.requestPermission().then((settings) async {
       print('Push permission: ${settings.authorizationStatus}');
       try {
         final token = await FirebaseMessaging.instance.getToken();
-        print('FCM Token: $token');
+        if (token != null) { // Ensure token is not null before printing
+          print('FCM Token: $token');
+        }
       } catch (e) {
         print('FCM getToken error: $e');
       }
@@ -111,17 +119,25 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
     final objectsAsync = ref.watch(objectsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background, // Set background color
       appBar: AppBar(
-        title: const Text('Объекты'),
+        title: const Text(
+          'Объекты',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: AppColors.secodnBg, // Set AppBar color
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed:
-                () => showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => const MainMenuSheet(),
-                ),
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const MainMenuSheet(),
+            ),
           ),
         ],
       ),
@@ -132,6 +148,7 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
               onRefresh: () async {
                 ref.invalidate(objectsProvider);
               },
+              color: AppColors.primary, // Color of refresh indicator
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
@@ -139,7 +156,7 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
                   Center(
                     child: Text(
                       "Нет объектов",
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
                     ),
                   ),
                 ],
@@ -151,6 +168,7 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
             onRefresh: () async {
               ref.invalidate(objectsProvider);
             },
+            color: AppColors.primary, // Color of refresh indicator
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -158,6 +176,10 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final obj = objects[index];
+                final bool isConnected = obj.connected; // Use the parsed boolean status
+                final Color statusColor = isConnected ? AppColors.iconGreen : AppColors.primary;
+
+
                 return Container(
                   decoration: BoxDecoration(
                     color: AppColors.secodnBg,
@@ -172,67 +194,101 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
                       vertical: 8,
                     ),
                     title: Text(
-                      obj['facilityName'],
+                      obj.facilityName,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
+                        fontSize: 18,
                       ),
                     ),
-                    subtitle: Text(
-                      obj['address'],
-                      style: const TextStyle(color: AppColors.text),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          obj.address,
+                          style: const TextStyle(color: AppColors.text, fontSize: 14),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ID Хаба: ${obj.hubNumber}', // Display hubNumber
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          obj['hubStatus']['description'] ?? '',
-                          style: TextStyle(
-                            color:
-                                obj['hubStatus']['name'] == 'SECURITY_ACTIVE'
-                                    ? AppColors.iconGreen
-                                    : AppColors.primary,
-                            fontWeight: FontWeight.w500,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            obj.statusNameRus, // Use parsed statusNameRus
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         const Icon(Icons.chevron_right, color: Colors.white),
                       ],
                     ),
-                    onTap:
-                        () => showModalBottomSheet(
-                          context: context,
-                          backgroundColor: Colors.transparent,
-                          builder:
-                              (context) => ObjectModalBottomSheet(
-                                object: obj,
-                                rootContext: context,
-                              ),
-                        ),
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => ObjectModalBottomSheet(
+                        object: obj, // Pass the parsed HubObject
+                        rootContext: context,
+                      ),
+                    ),
                   ),
                 );
               },
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error:
-            (e, _) => Center(
-              child: Text(
-                "Ошибка: $e",
-                style: const TextStyle(color: Colors.red),
-              ),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  "Ошибка загрузки объектов: $e",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(objectsProvider), // Invalidate the provider on retry
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  child: const Text('Повторить'),
+                ),
+              ],
             ),
+          ),
+        ),
       ),
-
       floatingActionButton: FloatingActionButton(
-        onPressed:
-            () => showDialog(
-              context: context,
-              builder: (_) => const AddHubDialog(),
-            ),
+        onPressed: () => showDialog(
+          context: context,
+          builder: (_) => const AddHubDialog(),
+        ),
         backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -257,14 +313,23 @@ class _AddHubDialogState extends ConsumerState<AddHubDialog> {
 
     try {
       final response = await dioGetWithRefresh(
+        // Ensure this endpoint is correct and handles POST requests for attachment
         'https://cms.iss-control.kz:8443/api/v1/mobile/hub/$hubId/attach',
       );
 
-      if (response.statusCode == 200 && response.data['code'] == 1) {
-        throw Exception(response.data['message'] ?? 'Ошибка при привязке хаба');
+      // Check the actual response structure for success/error
+      // Assuming 'code' 1 is an error as per your original code's throw logic.
+      // If code 1 is actually success, adjust this logic.
+      if (response.data != null && response.data['code'] == 1) {
+         // This condition implies an error based on your previous code logic.
+         // You might want to display response.data['message'] if it's an error message.
+         throw Exception(response.data['message'] ?? 'Неизвестная ошибка при привязке хаба.');
+      } else if (response.statusCode != 200) {
+         throw Exception('Ошибка сервера: ${response.statusCode}');
       }
 
-      ref.invalidate(objectsProvider);
+
+      ref.invalidate(objectsProvider); // Invalidate to refresh the list
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -273,9 +338,11 @@ class _AddHubDialogState extends ConsumerState<AddHubDialog> {
         ).showSnackBar(const SnackBar(content: Text('Хаб успешно добавлен')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка при добавлении хаба: $e')));
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -292,29 +359,46 @@ class _AddHubDialogState extends ConsumerState<AddHubDialog> {
       content: TextField(
         controller: _controller,
         style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Номер объекта',
-          labelStyle: TextStyle(color: Colors.white70),
+          labelStyle: const TextStyle(color: Colors.white70),
+          enabledBorder: OutlineInputBorder( // Add border styling
+            borderSide: const BorderSide(color: Colors.white54),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: AppColors.primary),
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       ),
       actions: [
-        ElevatedButton(
-          onPressed: _isLoading ? null : _submit,
-          child:
-              _isLoading
-                  ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                  : const Text('Добавить'),
-        ),
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: const Text(
+            'Отмена',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _submit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20, // Slightly larger for better visibility
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Добавить'),
         ),
       ],
     );

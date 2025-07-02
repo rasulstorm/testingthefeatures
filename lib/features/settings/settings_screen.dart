@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ISS/appColor.dart';
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
+// import 'package:intl/intl.dart'; // Этот импорт больше не нужен здесь
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -147,9 +148,9 @@ class SettingsScreen extends ConsumerWidget {
           }
 
           final profile = snapshot.data!;
-          final contracts = profile['contracts'];
-          final contract =
-              (contracts is List && contracts.isNotEmpty) ? contracts[0] : {};
+          // Контракты теперь будут отображаться на отдельной странице
+          // final contracts = profile['contracts'];
+          // final contract = (contracts is List && contracts.isNotEmpty) ? contracts[0] : {};
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -163,16 +164,16 @@ class SettingsScreen extends ConsumerWidget {
                   Icons.phone,
                 ),
                 _buildTile('ИИН', profile['iin'] ?? '-', Icons.badge),
+                
+                // Кнопка для перехода на страницу с контрактами
+                Divider(color: AppColors.text),
                 _buildTile(
-                  'Номер договора',
-                  contract['contractNumber'] ?? '-',
+                  'Мои контракты',
+                  '',
                   Icons.description,
+                  onTap: () => context.push('/contracts'), // Маршрут для новой страницы
                 ),
-                _buildTile(
-                  'Абонентская плата',
-                  '${contract['sum'] ?? 0} ₸',
-                  Icons.payments,
-                ),
+                
                 Divider(color: AppColors.text),
                 _buildTile(
                   'Изменить пароль',

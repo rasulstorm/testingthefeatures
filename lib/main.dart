@@ -10,13 +10,14 @@ import 'features/auth/ChangePasswordScreen.dart';
 import 'features/auth/otp_verification_screen.dart';
 import 'features/forgot/whatsapp_code_screen.dart';
 import 'features/forgot/reset_password_screen.dart';
-
+import 'features/settings/contract.dart';
 import 'appColor.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'features/notifications/notifications_screen.dart';
+import 'features/about_us/about_us_screen.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -99,7 +100,7 @@ class MyApp extends StatelessWidget {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(foregroundColor: AppColors.primary),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: AppColors.secodnBg,
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -165,6 +166,18 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/notifications',
       builder: (context, state) => NotificationsScreen(),
+    ),
+     GoRoute(
+      path: '/contracts', // Новый маршрут для страницы контрактов
+      builder: (BuildContext context, GoRouterState state) {
+        return const ContractsScreen();
+      },
+    ),
+     GoRoute(
+      path: '/about-us', // Новый маршрут
+      builder: (BuildContext context, GoRouterState state) {
+        return const AboutUsScreen();
+      },
     ),
   ],
 );

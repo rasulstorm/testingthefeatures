@@ -1,71 +1,119 @@
+// lib/features/dashboard/dashboard_screen.dart
+
 import 'package:ISS/features/main_menu_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart'; // Keep if you use GoRouter elsewhere
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:ISS/appColor.dart';
+import 'package:ISS/appColor.dart'; // Updated import if path changed
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+// Helper function for making GET requests with automatic token refresh
 Future<Response> dioGetWithRefresh(String path) async {
   final prefs = await SharedPreferences.getInstance();
 
   final refreshToken = prefs.getString('refreshToken');
-  if (refreshToken == null) throw Exception('No refresh token');
+  if (refreshToken == null || refreshToken.isEmpty) {
+    throw Exception('Refresh token not found. Please log in again.');
+  }
 
-  final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
-  final refreshResp = await refreshDio.post(
-    '/account-management/refresh',
-    data: {'refreshToken': refreshToken},
-  );
+  try {
+    // Use a new Dio instance for the refresh call to avoid interceptor recursion
+    final refreshDio = Dio(BaseOptions(
+      baseUrl: dio.options.baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ));
 
-  final data = refreshResp.data['data'];
-  final newAccessToken = data['accessToken'];
-  final newRefreshToken = data['refreshToken'];
+    final refreshResp = await refreshDio.post(
+      '/account-management/refresh',
+      data: {'refreshToken': refreshToken},
+    );
 
-  await prefs.setString('accessToken', newAccessToken);
-  await prefs.setString('refreshToken', newRefreshToken);
+    if (refreshResp.statusCode == 200) {
+      final data = refreshResp.data['data'];
+      final newAccessToken = data['accessToken'];
+      final newRefreshToken = data['refreshToken'];
 
-  final response = await dio.get(
-    path,
-    options: Options(headers: {'Authorization': '$newAccessToken'}),
-  );
+      await prefs.setString('accessToken', newAccessToken);
+      await prefs.setString('refreshToken', newRefreshToken);
 
-  return response;
+      // Use the global dio instance for the main request
+      final response = await dio.get(
+        path,
+        options: Options(headers: {'Authorization': 'Bearer $newAccessToken'}),
+      );
+      return response;
+    } else {
+      throw DioException(
+        requestOptions: refreshResp.requestOptions,
+        response: refreshResp,
+        type: DioExceptionType.badResponse,
+        error: "Failed to refresh token: ${refreshResp.statusCode}",
+      );
+    }
+  } catch (e) {
+    print('Error during dioGetWithRefresh: $e');
+    await prefs.remove('accessToken');
+    await prefs.remove('refreshToken');
+    rethrow;
+  }
 }
 
 final subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final response = await dioGetWithRefresh('/user/contracts');
-  final data = response.data;
-  if (data is List && data.isNotEmpty) {
-    return Map<String, dynamic>.from(data.first);
+  try {
+    final response = await dioGetWithRefresh('/user/contracts');
+    final data = response.data;
+    if (data is List && data.isNotEmpty) {
+      return Map<String, dynamic>.from(data.first);
+    }
+    return null;
+  } catch (e) {
+    print('Error fetching subscription: $e');
+    rethrow;
   }
-  return null;
 });
 
 final paymentsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
 ) async {
-  final response = await dioGetWithRefresh('/payment/');
-  final List data = response.data;
-  return data.map((e) => Map<String, dynamic>.from(e)).toList();
+  try {
+    final response = await dioGetWithRefresh('/payment/');
+    final List data = response.data;
+    return data.map((e) => Map<String, dynamic>.from(e)).toList();
+  } catch (e) {
+    print('Error fetching payments: $e');
+    rethrow;
+  }
 });
 
 final hasCardProvider = FutureProvider<bool>((ref) async {
-  final response = await dioGetWithRefresh('/card/');
-  final data = response.data;
-  return data is List && data.isNotEmpty;
+  try {
+    final response = await dioGetWithRefresh('/card/');
+    final data = response.data;
+    return data is List && data.isNotEmpty;
+  } catch (e) {
+    print('Error fetching hasCard: $e');
+    rethrow;
+  }
 });
 
 final cardInfoProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  final response = await dioGetWithRefresh('/card/');
-  final data = response.data;
-  if (data is List && data.isNotEmpty) {
-    return Map<String, dynamic>.from(data.first);
+  try {
+    final response = await dioGetWithRefresh('/card/');
+    final data = response.data;
+    if (data is List && data.isNotEmpty) {
+      return Map<String, dynamic>.from(data.first);
+    }
+    return null;
+  } catch (e) {
+    print('Error fetching card info: $e');
+    rethrow;
   }
-  return null;
 });
 
 class CardBindingWebViewPage extends ConsumerWidget {
@@ -128,10 +176,13 @@ class CardBindingWebViewPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Привязка карты'),
+        backgroundColor: AppColors.secodnBg, // Using AppColors
+        foregroundColor: AppColors.heading, // Using AppColors
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
+            color: AppColors.heading, // Using AppColors
           ),
         ],
       ),
@@ -146,25 +197,6 @@ Future<String> fetchBindCardHtml() async {
     return response.data.toString();
   }
   throw Exception('Ошибка загрузки HTML');
-}
-
-Future<void> unbindCard(
-  BuildContext context,
-  WidgetRef ref,
-  String cardId,
-) async {
-  try {
-    await dio.delete('/card/$cardId');
-    ref.invalidate(hasCardProvider);
-    ref.invalidate(cardInfoProvider);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Карта успешно отвязана')));
-  } catch (_) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Ошибка при отвязке карты')));
-  }
 }
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -197,6 +229,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Главная'),
+        backgroundColor: AppColors.secodnBg, // Using AppColors
+        foregroundColor: AppColors.heading, // Using AppColors
         actions: [
           IconButton(
             icon: const Icon(Icons.menu),
@@ -206,6 +240,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   backgroundColor: Colors.transparent,
                   builder: (_) => const MainMenuSheet(),
                 ),
+            color: AppColors.heading, // Using AppColors
           ),
         ],
       ),
@@ -225,21 +260,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       }
                     },
                     loading:
-                        () => const Center(child: CircularProgressIndicator()),
+                        () => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
                     error:
                         (err, _) => buildErrorWidget(
-                          ref,
-                          hasCardProvider,
-                          'Ошибка получения карты',
-                        ),
+                              ref,
+                              hasCardProvider,
+                              'Ошибка получения карты',
+                            ),
                   ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
               error:
                   (err, _) => buildErrorWidget(
-                    ref,
-                    subscriptionProvider,
-                    'Ошибка загрузки подписки',
-                  ),
+                        ref,
+                        subscriptionProvider,
+                        'Ошибка загрузки подписки',
+                      ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -247,81 +282,81 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppColors.heading,
+                color: AppColors.heading, // Using AppColors
               ),
             ),
             const SizedBox(height: 10),
             Expanded(
               child: Container(
-                color: AppColors.background,
+                color: AppColors.background, // Using AppColors
                 child: payments.when(
                   data:
                       (list) => ListView.builder(
-                        itemCount: list.length,
-                        itemBuilder: (context, index) {
-                          final payment = list[index];
-                          final status = payment['status'] == true;
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                              vertical: 6,
-                              horizontal: 12,
-                            ),
-                            color: AppColors.background,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ListTile(
-                                tileColor: AppColors.secodnBg,
-                                isThreeLine: true,
-                                title: Text(
-                                  "Сумма: ${payment['amount']} ₸",
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final payment = list[index];
+                              final status = payment['status'] == true;
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                  horizontal: 12,
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "Дата: ${DateFormat('d MMMM y', 'ru_RU').format(DateTime.parse(payment['dateOfPayment']))}",
-                                      style: TextStyle(color: Colors.grey[400]),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      "Описание: ${payment['description']}",
+                                color: AppColors.secodnBg, // Using AppColors
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: ListTile(
+                                    tileColor: AppColors.secodnBg, // Using AppColors
+                                    isThreeLine: true,
+                                    title: Text(
+                                      "Сумма: ${payment['amount']} ₸",
                                       style: const TextStyle(
-                                        color: Colors.white70,
+                                        color: AppColors.heading, // Using AppColors
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
                                       ),
                                     ),
-                                  ],
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Дата: ${DateFormat('d MMMM y', 'ru_RU').format(DateTime.parse(payment['dateOfPayment']))}",
+                                          style: const TextStyle(color: AppColors.text), // Using AppColors
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "Описание: ${payment['description']}",
+                                          style: const TextStyle(
+                                            color: AppColors.text, // Using AppColors
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Icon(
+                                      status ? Icons.check_circle : Icons.error,
+                                      color:
+                                          status
+                                              ? AppColors.iconGreen
+                                              : AppColors.iconRed, // Using AppColors
+                                    ),
+                                  ),
                                 ),
-                                trailing: Icon(
-                                  status ? Icons.check_circle : Icons.error,
-                                  color:
-                                      status
-                                          ? AppColors.iconGreen
-                                          : AppColors.iconRed,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                              );
+                            },
+                          ),
                   loading:
                       () => const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      ),
+                              child: CircularProgressIndicator(color: AppColors.primary), // Using AppColors
+                            ),
                   error:
                       (err, _) => buildErrorWidget(
-                        ref,
-                        paymentsProvider,
-                        'Ошибка загрузки платежей',
-                      ),
+                            ref,
+                            paymentsProvider,
+                            'Ошибка загрузки платежей',
+                          ),
                 ),
               ),
             ),
@@ -334,13 +369,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget buildNoSubscriptionCard(BuildContext context) {
     return Card(
       elevation: 2,
+      color: AppColors.secodnBg, // Using AppColors
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             const Text(
               "Подписка не активна",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading), // Using AppColors
             ),
             const SizedBox(height: 12),
             ElevatedButton(
@@ -349,7 +385,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   context: context,
                   barrierDismissible: false,
                   builder:
-                      (_) => const Center(child: CircularProgressIndicator()),
+                      (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
                 );
                 try {
                   final html = await fetchBindCardHtml();
@@ -367,10 +403,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Ошибка загрузки формы привязки'),
+                      backgroundColor: AppColors.iconRed, // Using AppColors
                     ),
                   );
                 }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary, // Using AppColors
+                foregroundColor: AppColors.heading, // Using AppColors
+              ),
               child: const Text("Привязать карту"),
             ),
           ],
@@ -387,13 +428,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final dateNext =
         data['dateNextPayment'] != null
             ? DateFormat(
-              'd MMMM y',
-              'ru_RU',
-            ).format(DateTime.parse(data['dateNextPayment']))
+                'd MMMM y',
+                'ru_RU',
+              ).format(DateTime.parse(data['dateNextPayment']))
             : 'неизвестно';
 
     return Card(
       elevation: 2,
+      color: AppColors.secodnBg, // Using AppColors
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -404,13 +446,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppColors.heading, // Using AppColors
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               "Статус: Активна",
-              style: TextStyle(fontSize: 16, color: Colors.green),
+              style: TextStyle(fontSize: 16, color: AppColors.iconGreen), // Using AppColors for green status
             ),
             const SizedBox(height: 8),
             cardInfo.when(
@@ -418,83 +460,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 final cardMask = card?['cardMask'] ?? '';
                 return Text(
                   "Карта: $cardMask",
-                  style: const TextStyle(fontSize: 14, color: Colors.white),
+                  style: const TextStyle(fontSize: 14, color: AppColors.text), // Using AppColors
                 );
               },
-              loading: () => const CircularProgressIndicator(),
+              loading: () => const CircularProgressIndicator(color: AppColors.primary), // Using AppColors
               error:
                   (err, _) => const Text(
-                    "Ошибка загрузки карты",
-                    style: TextStyle(color: Colors.red),
-                  ),
+                        "Ошибка загрузки карты",
+                        style: TextStyle(color: AppColors.iconRed), // Using AppColors
+                      ),
             ),
             const SizedBox(height: 8),
-            Text("Следующее списание: $dateNext"),
+            Text(
+              "Следующее списание: $dateNext",
+              style: const TextStyle(color: AppColors.text), // Using AppColors
+            ),
             const SizedBox(height: 12),
-            Row(
+            // Удалена строка с кнопкой "Связаться с поддержкой"
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "Карта привязана",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(color: AppColors.heading, fontSize: 16), // Using AppColors
                 ),
-                cardInfo.when(
-                  data: (card) {
-                    if (card == null) return const SizedBox();
-                    return TextButton.icon(
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder:
-                              (_) => AlertDialog(
-                                backgroundColor: AppColors.secodnBg,
-                                title: const Text(
-                                  'Подтвердите',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                                content: const Text(
-                                  'Вы уверены, что хотите отвязать карту?',
-                                  style: TextStyle(color: Colors.white70),
-                                ),
-                                actions: [
-                                  ElevatedButton(
-                                    onPressed:
-                                        () => Navigator.of(context).pop(true),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.redAccent,
-                                    ),
-                                    child: const Text('Отвязать'),
-                                  ),
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.of(context).pop(false),
-                                    child: const Text(
-                                      'Отмена',
-                                      style: TextStyle(color: Colors.white70),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                        );
-                        if (confirm == true) {
-                          await unbindCard(context, ref, card['id'].toString());
-                        }
-                      },
-                      icon: const Icon(Icons.link_off, color: Colors.redAccent),
-                      label: const Text(
-                        "Отвязать карту",
-                        style: TextStyle(color: Colors.redAccent),
-                      ),
-                    );
-                  },
-                  loading: () => const SizedBox(),
-                  error:
-                      (err, _) => buildErrorWidget(
-                        ref,
-                        cardInfoProvider,
-                        'Ошибка загрузки карты',
-                      ),
-                ),
+                // Здесь раньше был TextButton.icon для "Связаться с поддержкой"
               ],
             ),
           ],
@@ -511,10 +501,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(message, style: const TextStyle(color: Colors.redAccent)),
+        Text(message, style: const TextStyle(color: AppColors.iconRed)), // Using AppColors
         const SizedBox(height: 8),
         ElevatedButton(
           onPressed: () => ref.invalidate(provider),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary, // Using AppColors
+            foregroundColor: AppColors.heading, // Using AppColors
+          ),
           child: const Text('Обновить'),
         ),
       ],
