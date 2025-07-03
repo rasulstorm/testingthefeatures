@@ -42,8 +42,8 @@ class AuthInterceptor extends Interceptor {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken');
 
-    if (token != null) {
-      options.headers['Authorization'] = '$token';
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
     }
 
     handler.next(options);
@@ -59,7 +59,7 @@ class AuthInterceptor extends Interceptor {
 
       if (newToken != null) {
         final options = err.requestOptions;
-        options.headers['Authorization'] = '$newToken';
+        options.headers['Authorization'] = 'Bearer $newToken';
 
         try {
           final response = await dio.fetch(options);
@@ -73,7 +73,7 @@ class AuthInterceptor extends Interceptor {
           return handler.reject(err);
         }
       } else {
-        _queuedRequests.clear(); 
+        _queuedRequests.clear();
         return handler.reject(err);
       }
     }
@@ -83,7 +83,7 @@ class AuthInterceptor extends Interceptor {
       _queuedRequests.add((String newToken) async {
         try {
           final retryOptions = err.requestOptions;
-          retryOptions.headers['Authorization'] = '$newToken';
+          retryOptions.headers['Authorization'] = 'Bearer $newToken';
           final retryResponse = await dio.fetch(retryOptions);
           completer.complete(retryResponse);
         } catch (e) {
@@ -101,4 +101,37 @@ class AuthInterceptor extends Interceptor {
 
     return handler.next(err);
   }
+}
+
+// Утильная функция для получения валидного токена (для WebSocket)
+Future<String> getValidAccessToken(Dio dio) async {
+  final prefs = await SharedPreferences.getInstance();
+  String? accessToken = prefs.getString('accessToken');
+
+  if (accessToken == null || accessToken.isEmpty) {
+    final refreshToken = prefs.getString('refreshToken');
+    if (refreshToken == null) throw Exception('Refresh token missing');
+
+    final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
+    final refreshResp = await refreshDio.post('/account-management/refresh', data: {'refreshToken': refreshToken});
+
+    if (refreshResp.statusCode == 200) {
+      final data = refreshResp.data['data'];
+      accessToken = data['accessToken'] as String?;
+      final newRefreshToken = data['refreshToken'] as String?;
+      if (accessToken == null || newRefreshToken == null) {
+        throw Exception('Invalid refresh response');
+      }
+      await prefs.setString('accessToken', accessToken);
+      await prefs.setString('refreshToken', newRefreshToken);
+    } else {
+      throw Exception('Failed to refresh token');
+    }
+  }
+
+  if (accessToken.startsWith('Bearer ')) {
+    accessToken = accessToken.substring(7);
+  }
+
+  return accessToken;
 }

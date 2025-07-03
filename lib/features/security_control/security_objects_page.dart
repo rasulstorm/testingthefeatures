@@ -9,7 +9,7 @@ import 'package:ISS/models/hub_models.dart'; // Import the new models
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-
+import 'package:ISS/features/security_control/hub_detail_screen.dart';
 // Your existing dioGetWithRefresh and sendFcmTokenToBackend functions remain unchanged
 Future<Response> dioGetWithRefresh(String path) async {
   final prefs = await SharedPreferences.getInstance();
@@ -237,14 +237,13 @@ class _SecurityObjectsPageState extends ConsumerState<SecurityObjectsPage> {
                         const Icon(Icons.chevron_right, color: Colors.white),
                       ],
                     ),
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => ObjectModalBottomSheet(
-                        object: obj, // Pass the parsed HubObject
-                        rootContext: context,
-                      ),
-                    ),
+                    onTap: () {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => HubDetailsScreen(hub: obj), // obj — это твой HubObject
+    ),
+  );
+},
                   ),
                 );
               },

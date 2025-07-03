@@ -33,6 +33,14 @@ void main() async {
 
   await Future.microtask(() => setupDio());
 
+  // Добавь эту строчку для гарантированного вывода всех логов:
+  debugPrint = (String? message, {int? wrapWidth}) {
+    // Здесь можно добавить кастомную логику или просто:
+    if (message != null) {
+      print('DEBUG: $message');
+    }
+  };
+
   runApp(const ProviderScope(child: MyApp()));
 }
 

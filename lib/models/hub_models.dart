@@ -21,10 +21,10 @@ class Device {
 
   factory Device.fromJson(Map<String, dynamic> json) {
     return Device(
-      id: json['id'] as String? ?? '', // Added null-safety
-      name: json['name'] as String? ?? '', // Added null-safety
-      parameters: json['parameters'] as Map<String, dynamic>? ?? {}, // Added null-safety
-      lastUpdate: DateTime.tryParse(json['lastUpdate'] as String? ?? '') ?? DateTime.now(), // Added null-safety
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      parameters: Map<String, dynamic>.from(json['parameters'] ?? {}),
+      lastUpdate: DateTime.tryParse(json['lastUpdate'] as String? ?? '') ?? DateTime.now(),
       space: json['space'] != null ? Space.fromJson(json['space']) : null,
       group: json['group'] != null ? Group.fromJson(json['group']) : null,
       room: json['room'] != null ? Room.fromJson(json['room']) : null,
@@ -40,8 +40,8 @@ class Space {
 
   factory Space.fromJson(Map<String, dynamic> json) {
     return Space(
-      id: json['id'] as String? ?? '', // Added null-safety
-      name: json['name'] as String? ?? '', // Added null-safety
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
     );
   }
 }
@@ -55,9 +55,9 @@ class Room {
 
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
-      id: json['id'] as String? ?? '', // Added null-safety
-      name: json['name'] as String? ?? '', // Added null-safety
-      defaultRoom: json['defaultRoom'] as bool? ?? false, // Added null-safety
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      defaultRoom: json['defaultRoom'] as bool? ?? false,
     );
   }
 }
@@ -70,17 +70,18 @@ class Group {
 
   factory Group.fromJson(Map<String, dynamic> json) {
     return Group(
-      id: json['id'] as String? ?? '', // Added null-safety
-      name: json['name'] as String? ?? '', // Added null-safety
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
     );
   }
 }
 
 class HubObject {
-  final String id;
+  final String id; // Это ID хаба, вероятно, GUID '3fa85f64...'
   final String facilityName;
   final String address;
-  final String hubNumber;
+  final String hubNumber; // Это '3C40FR'
+  final String commandHubId; // <-- НОВОЕ ПОЛЕ для 'isshub_ccc2ddbc'
   final String statusName;
   final String statusNameRus;
   final bool connected;
@@ -91,6 +92,7 @@ class HubObject {
     required this.facilityName,
     required this.address,
     required this.hubNumber,
+    required this.commandHubId, // <-- ДОБАВЛЕНО
     required this.statusName,
     required this.statusNameRus,
     required this.connected,
@@ -110,6 +112,7 @@ class HubObject {
       facilityName: json['facilityName'] as String? ?? '',
       address: json['address'] as String? ?? '',
       hubNumber: json['hubNumber'] as String? ?? '',
+      commandHubId: json['hubId'] as String? ?? '', // <-- ПАРСИМ ИЗ JSON 'hubId'
       statusName: json['statusName'] as String? ?? '',
       statusNameRus: json['statusNameRus'] as String? ?? '',
       connected: json['connected'] as bool? ?? false,
