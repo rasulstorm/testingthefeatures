@@ -1,7 +1,8 @@
 PODS:
-  - Firebase/Core (10.25.0):
-    - Firebase/CoreOnly
-    - FirebaseAnalytics (~> 10.25.0)
+  - app_settings (5.1.1):
+    - Flutter
+  - background_fetch (1.4.0):
+    - Flutter
   - Firebase/CoreOnly (10.25.0):
     - FirebaseCore (= 10.25.0)
   - Firebase/Messaging (10.25.0):
@@ -10,28 +11,10 @@ PODS:
   - firebase_core (2.32.0):
     - Firebase/CoreOnly (= 10.25.0)
     - Flutter
-  - firebase_messaging (14.7.10):
+  - firebase_messaging (14.9.4):
     - Firebase/Messaging (= 10.25.0)
     - firebase_core
     - Flutter
-  - FirebaseAnalytics (10.25.0):
-    - FirebaseAnalytics/AdIdSupport (= 10.25.0)
-    - FirebaseCore (~> 10.0)
-    - FirebaseInstallations (~> 10.0)
-    - GoogleUtilities/AppDelegateSwizzler (~> 7.11)
-    - GoogleUtilities/MethodSwizzler (~> 7.11)
-    - GoogleUtilities/Network (~> 7.11)
-    - "GoogleUtilities/NSData+zlib (~> 7.11)"
-    - nanopb (< 2.30911.0, >= 2.30908.0)
-  - FirebaseAnalytics/AdIdSupport (10.25.0):
-    - FirebaseCore (~> 10.0)
-    - FirebaseInstallations (~> 10.0)
-    - GoogleAppMeasurement (= 10.25.0)
-    - GoogleUtilities/AppDelegateSwizzler (~> 7.11)
-    - GoogleUtilities/MethodSwizzler (~> 7.11)
-    - GoogleUtilities/Network (~> 7.11)
-    - "GoogleUtilities/NSData+zlib (~> 7.11)"
-    - nanopb (< 2.30911.0, >= 2.30908.0)
   - FirebaseCore (10.25.0):
     - FirebaseCoreInternal (~> 10.0)
     - GoogleUtilities/Environment (~> 7.12)
@@ -57,26 +40,16 @@ PODS:
     - Flutter
   - flutter_native_splash (2.4.3):
     - Flutter
-  - GoogleAppMeasurement (10.25.0):
-    - GoogleAppMeasurement/AdIdSupport (= 10.25.0)
-    - GoogleUtilities/AppDelegateSwizzler (~> 7.11)
-    - GoogleUtilities/MethodSwizzler (~> 7.11)
-    - GoogleUtilities/Network (~> 7.11)
-    - "GoogleUtilities/NSData+zlib (~> 7.11)"
-    - nanopb (< 2.30911.0, >= 2.30908.0)
-  - GoogleAppMeasurement/AdIdSupport (10.25.0):
-    - GoogleAppMeasurement/WithoutAdIdSupport (= 10.25.0)
-    - GoogleUtilities/AppDelegateSwizzler (~> 7.11)
-    - GoogleUtilities/MethodSwizzler (~> 7.11)
-    - GoogleUtilities/Network (~> 7.11)
-    - "GoogleUtilities/NSData+zlib (~> 7.11)"
-    - nanopb (< 2.30911.0, >= 2.30908.0)
-  - GoogleAppMeasurement/WithoutAdIdSupport (10.25.0):
-    - GoogleUtilities/AppDelegateSwizzler (~> 7.11)
-    - GoogleUtilities/MethodSwizzler (~> 7.11)
-    - GoogleUtilities/Network (~> 7.11)
-    - "GoogleUtilities/NSData+zlib (~> 7.11)"
-    - nanopb (< 2.30911.0, >= 2.30908.0)
+  - flutter_secure_storage (6.0.0):
+    - Flutter
+  - flutter_tts (0.0.1):
+    - Flutter
+  - flutter_voice_processor (1.1.2):
+    - Flutter
+    - ios-voice-processor (~> 1.2.0)
+  - geolocator_apple (1.2.0):
+    - Flutter
+    - FlutterMacOS
   - GoogleDataTransport (9.4.1):
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30911.0, >= 2.30908.0)
@@ -92,9 +65,6 @@ PODS:
   - GoogleUtilities/Logger (7.13.3):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - GoogleUtilities/MethodSwizzler (7.13.3):
-    - GoogleUtilities/Logger
-    - GoogleUtilities/Privacy
   - GoogleUtilities/Network (7.13.3):
     - GoogleUtilities/Logger
     - "GoogleUtilities/NSData+zlib"
@@ -109,48 +79,99 @@ PODS:
   - GoogleUtilities/UserDefaults (7.13.3):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
+  - image_picker_ios (0.0.1):
+    - Flutter
+  - ios-voice-processor (1.2.0)
+  - local_auth_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - nanopb (2.30910.0):
     - nanopb/decode (= 2.30910.0)
     - nanopb/encode (= 2.30910.0)
   - nanopb/decode (2.30910.0)
   - nanopb/encode (2.30910.0)
+  - network_info_plus (0.0.1):
+    - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - permission_handler_apple (9.3.0):
+    - Flutter
+  - Porcupine-iOS (3.0.4):
+    - ios-voice-processor (~> 1.2.0)
+  - porcupine_flutter (3.0.5):
+    - Flutter
+    - Porcupine-iOS (~> 3.0.4)
   - PromisesObjC (2.4.0)
+  - Rhino-iOS (3.0.2):
+    - ios-voice-processor (~> 1.2.0)
+  - rhino_flutter (3.0.4):
+    - Flutter
+    - Rhino-iOS (~> 3.0.2)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
   - sms_autofill (0.0.1):
     - Flutter
+  - speech_to_text (0.0.1):
+    - Flutter
+    - Try
+  - Try (2.1.1)
+  - url_launcher_ios (0.0.1):
+    - Flutter
   - webview_flutter_wkwebview (0.0.1):
     - Flutter
     - FlutterMacOS
+  - wifi_scan (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
-  - Firebase/Core
-  - Firebase/Messaging
+  - app_settings (from `.symlinks/plugins/app_settings/ios`)
+  - background_fetch (from `.symlinks/plugins/background_fetch/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - Flutter (from `Flutter`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
+  - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+  - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
+  - flutter_voice_processor (from `.symlinks/plugins/flutter_voice_processor/ios`)
+  - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
+  - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
+  - local_auth_darwin (from `.symlinks/plugins/local_auth_darwin/darwin`)
+  - network_info_plus (from `.symlinks/plugins/network_info_plus/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - porcupine_flutter (from `.symlinks/plugins/porcupine_flutter/ios`)
+  - rhino_flutter (from `.symlinks/plugins/rhino_flutter/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sms_autofill (from `.symlinks/plugins/sms_autofill/ios`)
+  - speech_to_text (from `.symlinks/plugins/speech_to_text/ios`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
   - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
+  - wifi_scan (from `.symlinks/plugins/wifi_scan/ios`)
 
 SPEC REPOS:
   trunk:
     - Firebase
-    - FirebaseAnalytics
     - FirebaseCore
     - FirebaseCoreInternal
     - FirebaseInstallations
     - FirebaseMessaging
-    - GoogleAppMeasurement
     - GoogleDataTransport
     - GoogleUtilities
+    - ios-voice-processor
     - nanopb
+    - Porcupine-iOS
     - PromisesObjC
+    - Rhino-iOS
+    - Try
 
 EXTERNAL SOURCES:
+  app_settings:
+    :path: ".symlinks/plugins/app_settings/ios"
+  background_fetch:
+    :path: ".symlinks/plugins/background_fetch/ios"
   firebase_core:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_messaging:
@@ -161,18 +182,47 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_native_splash:
     :path: ".symlinks/plugins/flutter_native_splash/ios"
+  flutter_secure_storage:
+    :path: ".symlinks/plugins/flutter_secure_storage/ios"
+  flutter_tts:
+    :path: ".symlinks/plugins/flutter_tts/ios"
+  flutter_voice_processor:
+    :path: ".symlinks/plugins/flutter_voice_processor/ios"
+  geolocator_apple:
+    :path: ".symlinks/plugins/geolocator_apple/darwin"
+  image_picker_ios:
+    :path: ".symlinks/plugins/image_picker_ios/ios"
+  local_auth_darwin:
+    :path: ".symlinks/plugins/local_auth_darwin/darwin"
+  network_info_plus:
+    :path: ".symlinks/plugins/network_info_plus/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
+  porcupine_flutter:
+    :path: ".symlinks/plugins/porcupine_flutter/ios"
+  rhino_flutter:
+    :path: ".symlinks/plugins/rhino_flutter/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sms_autofill:
     :path: ".symlinks/plugins/sms_autofill/ios"
+  speech_to_text:
+    :path: ".symlinks/plugins/speech_to_text/ios"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
   webview_flutter_wkwebview:
     :path: ".symlinks/plugins/webview_flutter_wkwebview/darwin"
+  wifi_scan:
+    :path: ".symlinks/plugins/wifi_scan/ios"
 
 SPEC CHECKSUMS:
+  app_settings: 5127ae0678de1dcc19f2293271c51d37c89428b2
+  background_fetch: 81d0f20490f0126a1c29709e458f47a69e80f44e
   Firebase: 0312a2352584f782ea56f66d91606891d4607f06
   firebase_core: 3b49a055ff54114cae400581c13671fe53936c36
-  firebase_messaging: 394589dcda43e42ec9807558a409a975e285c45b
-  FirebaseAnalytics: ec00fe8b93b41dc6fe4a28784b8e51da0647a248
+  firebase_messaging: 30fa3ec8cd0dc8a860b7817548911b97345a0875
   FirebaseCore: 7ec4d0484817f12c3373955bc87762d96842d483
   FirebaseCoreInternal: df84dd300b561c27d5571684f389bf60b0a5c934
   FirebaseInstallations: 913cf60d0400ebd5d6b63a28b290372ab44590dd
@@ -180,15 +230,32 @@ SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
-  GoogleAppMeasurement: 9abf64b682732fed36da827aa2a68f0221fd2356
+  flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+  flutter_tts: b88dbc8655d3dc961bc4a796e4e16a4cc1795833
+  flutter_voice_processor: f60363f959515eaebc35bcaaf26017596c953fc6
+  geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
   GoogleDataTransport: 6c09b596d841063d76d4288cc2d2f42cc36e1e2a
   GoogleUtilities: ea963c370a38a8069cc5f7ba4ca849a60b6d7d15
+  image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
+  ios-voice-processor: 6b5ca08962f39e434fe39dca0f483d923a3b1b97
+  local_auth_darwin: d2e8c53ef0c4f43c646462e3415432c4dab3ae19
   nanopb: 438bc412db1928dac798aa6fd75726007be04262
+  network_info_plus: 16d8832ab43b7bc22b168d76fffcad9da35486d2
+  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  Porcupine-iOS: da103a8848ce6b36acd4a5e42bb811d4532dd515
+  porcupine_flutter: ce8290709f290b2a1c817c05ce607061d00ab540
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  Rhino-iOS: 19392b6663594385dad5c375a99484b383351e59
+  rhino_flutter: 823a440d488acdc117acc84195f1a3abd547cf3b
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   sms_autofill: b36b2147535657fea83d7f3898d7831de70bd8e4
+  speech_to_text: ae2abc312e619ff1c53e675a9fc4d785a15c03bb
+  Try: 5ef669ae832617b3cee58cb2c6f99fb767a4ff96
+  url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
   webview_flutter_wkwebview: 1821ceac936eba6f7984d89a9f3bcb4dea99ebb2
+  wifi_scan: 3254c160abc7266feac359a927f8ab64f2703774
 
-PODFILE CHECKSUM: b6e53436473bc73455b8b48f64032f44610c554b
+PODFILE CHECKSUM: 4747199736fa732698f8e5a058eb634e6db44a08
 
 COCOAPODS: 1.16.2

@@ -1,7 +1,4 @@
-# Uncomment this line to define a global platform for your project
 platform :ios, '13.0'
-
-# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -15,7 +12,6 @@ def flutter_root
   unless File.exist?(generated_xcode_build_settings_path)
     raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
   end
-
   File.foreach(generated_xcode_build_settings_path) do |line|
     matches = line.match(/FLUTTER_ROOT\=(.*)/)
     return matches[1].strip if matches
@@ -28,13 +24,11 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  use_frameworks!
+  # статическая линковка убирает динамические фреймворки и избавляет от 3193
+  use_frameworks! :linkage => :static
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  
-  pod 'Firebase/Core'
-  pod 'Firebase/Messaging'
 
   target 'RunnerTests' do
     inherit! :search_paths
@@ -44,5 +38,29 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+
+    target.build_configurations.each do |config|
+      # Bitcode выключаем
+      config.build_settings['ENABLE_BITCODE'] = 'NO'
+
+      # На всякий случай ObjC категории
+      other_ldflags = config.build_settings['OTHER_LDFLAGS'] || ['$(inherited)']
+      unless other_ldflags.include?('-ObjC')
+        other_ldflags << '-ObjC'
+      end
+      config.build_settings['OTHER_LDFLAGS'] = other_ldflags
+
+      # permission_handler: включаем нужные флаги (можно добавлять по мере надобности)
+      defs = config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+      need = [
+        'PERMISSION_MICROPHONE=1',
+        'PERMISSION_SPEECH_RECOGNITION=1',
+        'PERMISSION_LOCATION=1',
+        'PERMISSION_PHOTOS=1',
+        'PERMISSION_CAMERA=1',
+      ]
+      need.each { |d| defs << d unless defs.include?(d) }
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = defs
+    end
   end
 end
