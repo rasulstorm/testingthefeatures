@@ -1,180 +1,144 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:collection/collection.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 import 'package:ISS/appColor.dart';
-import 'package:ISS/features/main_menu_sheet.dart';
-import 'notifications_provider.dart';
+import 'package:ISS/appstyles.dart';
+import 'package:ISS/core/network/dio_provider.dart';
+import 'package:intl/intl.dart';
+// import 'package:ISS/features/main_menu_sheet.dart'; // УДАЛИТЬ: больше не нужен
 
-class NotificationsScreen extends ConsumerStatefulWidget {
+final notificationsProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+  final refreshToken = prefs.getString('refreshToken');
+  if (refreshToken == null) throw Exception('No refresh token');
+
+  final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
+  final refreshResp = await refreshDio.post(
+    '/account-management/refresh',
+    data: {'refreshToken': refreshToken},
+  );
+
+  final data = refreshResp.data['data'];
+  final newAccessToken = data['accessToken'];
+  final newRefreshToken = data['refreshToken'];
+
+  await prefs.setString('accessToken', newAccessToken);
+  await prefs.setString('refreshToken', newRefreshToken);
+
+  final response = await dio.get(
+    '/user/notificationToken',
+    options: Options(headers: {'Authorization': '$newAccessToken'}),
+  );
+
+  if (response.data is List) {
+    return List<Map<String, dynamic>>.from(response.data);
+  }
+  return [];
+});
+
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  ConsumerState<NotificationsScreen> createState() =>
-      _NotificationsScreenState();
-}
-
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  final _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-
-    Future.microtask(() {
-      ref.read(notificationsProvider.notifier).refresh();
-    });
-
-    _scrollController.addListener(() {
-      final notifier = ref.read(notificationsProvider.notifier);
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 100) {
-        notifier.fetchNextPage();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _refresh() async {
-    await ref.read(notificationsProvider.notifier).refresh();
-  }
-
-  String formatDateLabel(String rawDate) {
-    final now = DateTime.now();
-    final today = DateFormat('dd.MM.yyyy').format(now);
-    final yesterday = DateFormat(
-      'dd.MM.yyyy',
-    ).format(now.subtract(const Duration(days: 1)));
-
-    if (rawDate == today) return 'Сегодня';
-    if (rawDate == yesterday) return 'Вчера';
-    return rawDate;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(notificationsProvider);
-
-    final grouped = groupBy<NotificationItem, String>(
-      state.items,
-      (item) => DateFormat('dd.MM.yyyy').format(item.dateTime),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notificationsAsyncValue = ref.watch(notificationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Уведомления'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const MainMenuSheet(),
-              );
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _refresh,
-        child: Builder(
-          builder: (context) {
-            if (state.items.isEmpty && !state.isLoading) {
-              return const SingleChildScrollView(
-                physics: AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: 400,
-                  child: Center(
-                    child: Text(
-                      'Нет уведомлений',
-                      style: TextStyle(color: Colors.white70),
-                    ),
+      backgroundColor: AppColors.getBackgroundColor(context),
+      body: notificationsAsyncValue.when(
+        data: (notifications) {
+          if (notifications.isEmpty) {
+            return Center(
+              child: Text(
+                'У вас пока нет уведомлений.',
+                style: AppStyles.bodyText1(
+                  context,
+                ).copyWith(color: AppColors.getSecondaryTextColor(context)),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final notification = notifications[index];
+              final date =
+                  notification['date'] != null
+                      ? DateFormat(
+                        'd MMMM y, HH:mm',
+                        'ru_RU',
+                      ).format(DateTime.parse(notification['date']))
+                      : 'неизвестно';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16.0),
+                decoration: AppStyles.cardDecoration(context),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        notification['title'] ?? 'Без заголовка',
+                        style: AppStyles.headline4(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        notification['body'] ?? 'Без описания',
+                        style: AppStyles.bodyText1(context),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Дата: $date',
+                        style: AppStyles.bodyText2(context).copyWith(
+                          color: AppColors.getSecondaryTextColor(context),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
-            }
-
-            return ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: grouped.length + (state.isLoading ? 1 : 0),
-              itemBuilder: (context, i) {
-                if (i >= grouped.length) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                final rawDate = grouped.keys.elementAt(i);
-                final dateLabel = formatDateLabel(rawDate);
-                final items = grouped[rawDate]!;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            },
+          );
+        },
+        loading:
+            () => Center(
+              child: CircularProgressIndicator(color: AppColors.primaryAccent),
+            ),
+        error:
+            (error, stack) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    const SizedBox(height: 16),
                     Text(
-                      dateLabel,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Ошибка загрузки уведомлений: ${error.toString()}',
+                      textAlign: TextAlign.center,
+                      style: AppStyles.bodyText1(
+                        context,
+                      ).copyWith(color: AppColors.error),
                     ),
-                    const SizedBox(height: 8),
-                    ...items.map(
-                      (item) => Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.secodnBg,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ListTile(
-                          title: Text(
-                            item.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.description,
-                                style: const TextStyle(color: Colors.white70),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('HH:mm').format(item.dateTime),
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          leading: const Icon(
-                            Icons.notifications,
-                            color: Colors.white,
-                          ),
-                        ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(notificationsProvider),
+                      style: AppStyles.primaryButtonStyle,
+                      child: Text(
+                        'Повторить',
+                        style: AppStyles.bodyText1(
+                          context,
+                        ).copyWith(color: AppColors.textColorDark),
                       ),
                     ),
                   ],
-                );
-              },
-            );
-          },
-        ),
+                ),
+              ),
+            ),
       ),
     );
   }

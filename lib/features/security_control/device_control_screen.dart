@@ -3,9 +3,10 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/io.dart';
 
-final webSocketProvider = StateNotifierProvider<WebSocketNotifier, Map<String, dynamic>>(
-  (ref) => WebSocketNotifier(),
-);
+final webSocketProvider =
+    StateNotifierProvider<WebSocketNotifier, Map<String, dynamic>>(
+      (ref) => WebSocketNotifier(),
+    );
 
 class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
   WebSocketNotifier() : super({});
@@ -16,14 +17,18 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
 
   Timer? _reconnectTimer;
 
-  Future<void> connect(String hubId, String deviceName, {required String token}) async {
+  Future<void> connect(
+    String hubId,
+    String deviceName, {
+    required String token,
+  }) async {
     if (_connected) {
       print('[WS] Already connected, skipping connect.');
       return;
     }
 
     try {
-      final url = 'wss://cms.iss-control.kz:8443/ws?token=$token';
+      final url = 'wss://app.iss-control.kz/ws?token=$token';
       print('[WS] Connecting to $url for deviceName=$deviceName');
 
       _channel = IOWebSocketChannel.connect(Uri.parse(url));
@@ -32,7 +37,8 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
         (message) {
           print('[WS] Received message: $message');
           final data = jsonDecode(message);
-          if (data['type'] == 'DEVICE_STATE_UPDATE' && data['deviceId'] == deviceName) {
+          if (data['type'] == 'DEVICE_STATE_UPDATE' &&
+              data['deviceId'] == deviceName) {
             state = Map<String, dynamic>.from(data['payload'] ?? {});
             print('[WS] State updated for deviceName=$deviceName: ${state}');
           } else {
@@ -69,7 +75,11 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
     });
   }
 
-  void sendCommand(String hubId, String deviceName, Map<String, dynamic> payload) {
+  void sendCommand(
+    String hubId,
+    String deviceName,
+    Map<String, dynamic> payload,
+  ) {
     if (!_connected) {
       print('[WS] Cannot send command, WebSocket not connected.');
       return;
@@ -77,10 +87,7 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
     final command = {
       "type": "DEVICE_COMMAND",
       "hubId": hubId,
-      "details": {
-        "deviceId": deviceName,
-        "payload": payload,
-      },
+      "details": {"deviceId": deviceName, "payload": payload},
     };
     final jsonCommand = jsonEncode(command);
     print('[WS] Sending command: $jsonCommand');
@@ -89,7 +96,9 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
 
   @override
   void dispose() {
-    print('[WS] Disposing WebSocketNotifier, cancelling timers and closing connection.');
+    print(
+      '[WS] Disposing WebSocketNotifier, cancelling timers and closing connection.',
+    );
     _reconnectTimer?.cancel();
     _channel.sink.close();
     super.dispose();

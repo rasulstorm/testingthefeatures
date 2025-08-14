@@ -1,122 +1,165 @@
 // lib/models/hub_models.dart
+import 'package:ISS/models/device_models.dart';
 
-class Device {
+// ----- Space/Room refs (без изменений) -----
+class HubSpaceRef {
   final String id;
   final String name;
-  final Map<String, dynamic> parameters;
-  final DateTime lastUpdate;
-  final Space? space;
-  final Group? group;
-  final Room? room;
-
-  Device({
-    required this.id,
-    required this.name,
-    required this.parameters,
-    required this.lastUpdate,
-    this.space,
-    this.group,
-    this.room,
-  });
-
-  factory Device.fromJson(Map<String, dynamic> json) {
-    return Device(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      parameters: Map<String, dynamic>.from(json['parameters'] ?? {}),
-      lastUpdate: DateTime.tryParse(json['lastUpdate'] as String? ?? '') ?? DateTime.now(),
-      space: json['space'] != null ? Space.fromJson(json['space']) : null,
-      group: json['group'] != null ? Group.fromJson(json['group']) : null,
-      room: json['room'] != null ? Room.fromJson(json['room']) : null,
-    );
-  }
+  HubSpaceRef({required this.id, required this.name});
+  factory HubSpaceRef.fromJson(Map<String, dynamic> json) => HubSpaceRef(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+  );
 }
 
-class Space {
-  final String id;
-  final String name;
-
-  Space({required this.id, required this.name});
-
-  factory Space.fromJson(Map<String, dynamic> json) {
-    return Space(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-    );
-  }
-}
-
-class Room {
+class HubRoomRef {
   final String id;
   final String name;
   final bool defaultRoom;
-
-  Room({required this.id, required this.name, required this.defaultRoom});
-
-  factory Room.fromJson(Map<String, dynamic> json) {
-    return Room(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      defaultRoom: json['defaultRoom'] as bool? ?? false,
-    );
-  }
+  HubRoomRef({required this.id, required this.name, required this.defaultRoom});
+  factory HubRoomRef.fromJson(Map<String, dynamic> json) => HubRoomRef(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+    defaultRoom: json['defaultRoom'] as bool? ?? false,
+  );
 }
 
-class Group {
+class HubGroupRef {
   final String id;
   final String name;
-
-  Group({required this.id, required this.name});
-
-  factory Group.fromJson(Map<String, dynamic> json) {
-    return Group(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-    );
-  }
+  HubGroupRef({required this.id, required this.name});
+  factory HubGroupRef.fromJson(Map<String, dynamic> json) => HubGroupRef(
+    id: json['id'] as String? ?? '',
+    name: json['name'] as String? ?? '',
+  );
 }
 
 class HubObject {
-  final String id; // Это ID хаба, вероятно, GUID '3fa85f64...'
+  final String id;
   final String facilityName;
   final String address;
-  final String hubNumber; // Это '3C40FR'
-  final String commandHubId; // <-- НОВОЕ ПОЛЕ для 'isshub_ccc2ddbc'
+  final String hubNumber;
+
+  /// Ранее это поле называлось commandHubId — оставляем для совместимости UI.
+  final String commandHubId;
+
   final String statusName;
   final String statusNameRus;
-  final bool connected;
-  final List<Device> devices;
+  final bool connected; // = isConnected
+  final bool onMonitoring; // = isOnMonitoring
+
+  final List<BaseDevice> devices;
+  final HubSpaceRef? space;
+  final List<HubRoomRef> rooms;
 
   HubObject({
     required this.id,
     required this.facilityName,
     required this.address,
     required this.hubNumber,
-    required this.commandHubId, // <-- ДОБАВЛЕНО
+    required this.commandHubId,
     required this.statusName,
     required this.statusNameRus,
     required this.connected,
     required this.devices,
+    required this.onMonitoring,
+    required this.space,
+    required this.rooms,
   });
 
   factory HubObject.fromJson(Map<String, dynamic> json) {
-    var devicesList = <Device>[];
-    if (json['devices'] != null) {
-      devicesList = (json['devices'] as List)
-          .map((i) => Device.fromJson(i as Map<String, dynamic>))
-          .toList();
+    // Устройства в ответе «облегчённые» → создаём UnknownDevice,
+    // чтобы UI жил до прихода лайв-данных по WebSocket.
+    final devicesJson = (json['devices'] as List?) ?? const [];
+    final parsedDevices =
+        devicesJson.map((d) {
+          final m = d as Map<String, dynamic>;
+          final room = m['room'] as Map<String, dynamic>?;
+          return UnknownDevice(
+            id: (m['id'] ?? '').toString(),
+            friendlyName: (m['name'] ?? '').toString(),
+            model: (m['title'] ?? '').toString(), // если есть «красивое имя»
+            manufacturer: '',
+            linkQuality: 0,
+            battery: null,
+            rawData: <String, dynamic>{}, // телеметрии здесь нет
+          );
+        }).toList();
+
+    // space
+    HubSpaceRef? spaceRef;
+    if (json['space'] is Map<String, dynamic>) {
+      spaceRef = HubSpaceRef.fromJson(json['space'] as Map<String, dynamic>);
     }
 
+    // rooms
+    final roomsJson = (json['rooms'] as List?) ?? const [];
+    final roomRefs =
+        roomsJson
+            .map((r) => HubRoomRef.fromJson(r as Map<String, dynamic>))
+            .toList();
+
+    // Выбираем, откуда брать идентификатор команды (hubId предпочтительнее)
+    final commandHubId = (json['hubId'] ?? json['hubNumber'] ?? '').toString();
+
     return HubObject(
-      id: json['id'] as String? ?? '',
-      facilityName: json['facilityName'] as String? ?? '',
-      address: json['address'] as String? ?? '',
-      hubNumber: json['hubNumber'] as String? ?? '',
-      commandHubId: json['hubId'] as String? ?? '', // <-- ПАРСИМ ИЗ JSON 'hubId'
-      statusName: json['statusName'] as String? ?? '',
-      statusNameRus: json['statusNameRus'] as String? ?? '',
-      connected: json['connected'] as bool? ?? false,
-      devices: devicesList,
+      id: (json['id'] ?? '').toString(),
+      facilityName: (json['facilityName'] ?? '').toString(),
+      address: (json['address'] ?? '').toString(),
+      hubNumber: (json['hubNumber'] ?? '').toString(),
+      commandHubId: commandHubId,
+      statusName: (json['statusName'] ?? '').toString(),
+      statusNameRus: (json['statusNameRus'] ?? '').toString(),
+      connected: json['isConnected'] as bool? ?? false, // <—
+      onMonitoring: json['isOnMonitoring'] as bool? ?? false, // <—
+      devices: parsedDevices,
+      space: spaceRef,
+      rooms: roomRefs,
     );
   }
+
+  HubObject copyWith({
+    String? id,
+    String? facilityName,
+    String? address,
+    String? hubNumber,
+    String? commandHubId,
+    String? statusName,
+    String? statusNameRus,
+    bool? connected,
+    List<BaseDevice>? devices,
+    bool? onMonitoring,
+    HubSpaceRef? space,
+    List<HubRoomRef>? rooms,
+  }) {
+    return HubObject(
+      id: id ?? this.id,
+      facilityName: facilityName ?? this.facilityName,
+      address: address ?? this.address,
+      hubNumber: hubNumber ?? this.hubNumber,
+      commandHubId: commandHubId ?? this.commandHubId,
+      statusName: statusName ?? this.statusName,
+      statusNameRus: statusNameRus ?? this.statusNameRus,
+      connected: connected ?? this.connected,
+      devices: devices ?? this.devices,
+      onMonitoring: onMonitoring ?? this.onMonitoring,
+      space: space ?? this.space,
+      rooms: rooms ?? this.rooms,
+    );
+  }
+
+  factory HubObject.empty() => HubObject(
+    id: '',
+    facilityName: '',
+    address: '',
+    hubNumber: '',
+    commandHubId: '',
+    statusName: '',
+    statusNameRus: '',
+    connected: false,
+    devices: const [],
+    onMonitoring: false,
+    space: null,
+    rooms: const [],
+  );
 }

@@ -1,8 +1,7 @@
-// lib/features/about_us/about_us_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:ISS/appColor.dart'; // Убедитесь, что путь правильный
-import 'package:ISS/features/main_menu_sheet.dart'; // Импортируем MainMenuSheet
+import 'package:ISS/appcolor.dart';
+import 'package:ISS/appstyles.dart';
 
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
@@ -10,58 +9,27 @@ class AboutUsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
-        // ДОБАВЛЕНА КНОПКА НАЗАД
-        leading: const BackButton(
-          color: AppColors.heading, // Явно указываем цвет для кнопки назад
-        ),
-        title: const Text(
-          'О нас',
-          style: TextStyle(color: AppColors.heading),
-        ),
-        backgroundColor: AppColors.secodnBg,
-        iconTheme: const IconThemeData(color: AppColors.heading), // Цвет иконок в AppBar (включая BackButton по умолчанию)
-        elevation: 0, // Убирает тень под AppBar
-
-        // Сендвич (кнопка меню) в AppBar
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent, // Для кастомного фона в MainMenuSheet
-                builder: (_) => const MainMenuSheet(),
-              );
-            },
-            color: AppColors.heading, // Цвет иконки меню
-          ),
-        ],
+        leading: BackButton(color: AppColors.getTextColor(context)),
+        title: Text('О нас', style: AppStyles.headline3(context)),
+        backgroundColor: AppColors.getCardBackgroundColor(context),
+        iconTheme: IconThemeData(color: AppColors.getTextColor(context)),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Заголовок
             Text(
               'Добро пожаловать в ISS (Innovative Security Systems)!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.heading,
-              ),
+              style: AppStyles.headline2(context),
             ),
             const SizedBox(height: 20),
-
-            // Информация о компании
-            Card(
-              color: AppColors.secodnBg,
+            Container(
+              decoration: AppStyles.cardDecoration(context),
               margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -69,39 +37,31 @@ class AboutUsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Наша миссия',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                      style: AppStyles.headline3(
+                        context,
+                      ).copyWith(color: AppColors.primaryAccent),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Мы - компания Innovative Security Systems (ISS), лидер в разработке передовых решений для "Умного дома". Наша цель - сделать вашу жизнь безопаснее, комфортнее и эффективнее с помощью инновационных технологий.',
-                      style: TextStyle(fontSize: 16, color: AppColors.text),
+                      style: AppStyles.bodyText1(context),
                     ),
                     const SizedBox(height: 15),
                     Text(
                       'Что мы предлагаем?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                      style: AppStyles.headline3(
+                        context,
+                      ).copyWith(color: AppColors.primaryAccent),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Наше приложение "Умный дом" предоставляет полный контроль над всеми системами безопасности и автоматизации вашего дома. С ISS вы можете легко управлять освещением, климатом, видеонаблюдением, охранными системами и многими другими устройствами прямо со своего смартфона.',
-                      style: TextStyle(fontSize: 16, color: AppColors.text),
+                      style: AppStyles.bodyText1(context),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Основные сервисы:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.heading,
-                      ),
+                      style: AppStyles.headline4(context),
                     ),
                     const SizedBox(height: 5),
                     _buildServiceItem(
@@ -134,14 +94,9 @@ class AboutUsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Контактная информация
-            Card(
-              color: AppColors.secodnBg,
+            Container(
+              decoration: AppStyles.cardDecoration(context),
               margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -149,16 +104,14 @@ class AboutUsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Возникли вопросы?',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                      style: AppStyles.headline3(
+                        context,
+                      ).copyWith(color: AppColors.primaryAccent),
                     ),
                     const SizedBox(height: 10),
                     Text(
                       'Если у вас есть какие-либо вопросы, предложения или вы хотите узнать больше о наших услугах, пожалуйста, свяжитесь с нами.',
-                      style: TextStyle(fontSize: 16, color: AppColors.text),
+                      style: AppStyles.bodyText1(context),
                     ),
                     const SizedBox(height: 15),
                     GestureDetector(
@@ -170,25 +123,35 @@ class AboutUsScreen extends StatelessWidget {
                         if (await canLaunchUrl(emailLaunchUri)) {
                           await launchUrl(emailLaunchUri);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Не удалось открыть почтовое приложение'),
-                              backgroundColor: AppColors.iconRed,
-                            ),
-                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Не удалось открыть почтовое приложение',
+                                  style: AppStyles.bodyText2(
+                                    context,
+                                  ).copyWith(color: AppColors.textColorDark),
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
                         }
                       },
                       child: Row(
                         children: [
-                          Icon(Icons.email, color: AppColors.primary, size: 28),
+                          Icon(
+                            Icons.email,
+                            color: AppColors.primaryAccent,
+                            size: 28,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             'info@iss-control.kz',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: AppColors.primary,
+                            style: AppStyles.bodyText1(context).copyWith(
+                              color: AppColors.primaryAccent,
                               decoration: TextDecoration.underline,
-                              decorationColor: AppColors.primary,
+                              decorationColor: AppColors.primaryAccent,
                             ),
                           ),
                         ],
@@ -211,14 +174,9 @@ class AboutUsScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.iconGreen, size: 20),
+          Icon(icon, color: AppColors.secondaryAccent, size: 20),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 15, color: AppColors.text),
-            ),
-          ),
+          Expanded(child: Text(text, style: AppStyles.bodyText2(context))),
         ],
       ),
     );

@@ -26,7 +26,9 @@ class SecurityCommandService {
   }
 
   Future<Response> triggerAlarm(String hubId) async {
-    return dio.post('https://signal-receiver.iss-control.kz:8443/api/hub/$hubId/alarm');
+    return dio.post(
+      'https://signal-receiver.iss-control.kz:8443/api/hub/$hubId/alarm',
+    );
   }
 
   Future<Response> attachHub(String hubId) async {

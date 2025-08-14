@@ -13,6 +13,7 @@ class OtpScreen extends ConsumerStatefulWidget {
   final String iin;
   final String phoneNumber;
   final String firstName;
+  final String? lastName;
 
   const OtpScreen({
     Key? key,
@@ -22,6 +23,7 @@ class OtpScreen extends ConsumerStatefulWidget {
     required this.iin,
     required this.phoneNumber,
     required this.firstName,
+    required this.lastName,
   }) : super(key: key);
 
   @override
@@ -33,6 +35,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
   bool _canResend = false;
   int _secondsRemaining = 60;
   Timer? _timer;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -47,6 +50,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
       _code = code ?? '';
     });
     print("Автоввод кода: $_code");
+    if (_code.length == 6) {
+      _submitCode();
+    }
   }
 
   void _listenForCode() async {
@@ -54,13 +60,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
     listenForCode();
   }
 
+  // ИСПРАВЛЕНИЕ: Возвращаемся к оригинальной логике с queryParameters
   void _sendCode() async {
     final phone = normalizePhoneNumber(widget.phone);
 
     try {
       final response = await Dio().post(
-        'https://cms.iss-control.kz:8443/api/v1/account-management/send-otp',
+        'https://app.iss-control.kz/api/v1/account-management/send-otp',
         queryParameters: {
+          // <-- ВОЗВРАЩАЕМ QUERY PARAMETERS
           'phoneNumber': phone,
           'verificationType': 'whatsapp',
           'forgotPassword': false,
@@ -75,19 +83,23 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ошибка при отправке SMS')),
+          SnackBar(content: Text('Ошибка при отправке кода: ${e.toString()}')),
         );
       }
     }
   }
 
   void _submitCode() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
     final phone = normalizePhoneNumber(widget.phone);
     final code = _code;
 
     try {
+      // Для верификации также используем queryParameters, как в оригинале
       final verifyResponse = await Dio().post(
-        'https://cms.iss-control.kz:8443/api/v1/account-management/verify-otp',
+        'https://app.iss-control.kz/api/v1/account-management/verify-otp',
         queryParameters: {'phoneNumber': phone, 'code': code},
       );
 
@@ -95,14 +107,16 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
       final message = verifyData['message'];
 
       if (verifyData['code'] == 0) {
+        // А для регистрации, как и было, используем data
         final registerResponse = await Dio().post(
-          'https://cms.iss-control.kz:8443/api/v1/account-management/register',
+          'https://app.iss-control.kz/api/v1/account-management/register',
           data: {
             'email': widget.email,
             'password': widget.password,
             'iin': widget.iin,
             'firstName': widget.firstName,
             'phoneNumber': widget.phoneNumber,
+            'lastName': widget.lastName,
           },
         );
 
@@ -122,43 +136,43 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Регистрация успешна')),
             );
-            context.go('/security-control');
+            context.go('/main');
           }
         } else {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ошибка: токены не получены')),
-            );
-          }
+          throw Exception('Ошибка: токены не получены');
         }
       } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message ?? 'Ошибка подтверждения')),
-          );
-        }
+        throw Exception(message ?? 'Ошибка подтверждения');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ошибка при подтверждении или регистрации'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: ${e.toString()}')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
 
   void _startTimer() {
-    _canResend = false;
-    _secondsRemaining = 60;
+    setState(() {
+      _canResend = false;
+      _secondsRemaining = 60;
+    });
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining == 0) {
-        setState(() => _canResend = true);
+      if (_secondsRemaining <= 0) {
         timer.cancel();
+        if (mounted) {
+          setState(() => _canResend = true);
+        }
       } else {
-        setState(() => _secondsRemaining--);
+        if (mounted) {
+          setState(() => _secondsRemaining--);
+        }
       }
     });
   }
@@ -178,36 +192,48 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            const Text("Введите код, отправленный в WhatsApp"),
+            Text(
+              "Введите код, отправленный в WhatsApp на номер ${widget.phone}",
+            ),
             const SizedBox(height: 24),
             PinFieldAutoFill(
               codeLength: 6,
               currentCode: _code,
               onCodeChanged: (val) => setState(() => _code = val ?? ""),
-              onCodeSubmitted: (val) => print("Код отправлен: $val"),
+              onCodeSubmitted: (val) {
+                if (val.length == 6) _submitCode();
+              },
               decoration: UnderlineDecoration(
-                textStyle: const TextStyle(fontSize: 20, color: Colors.white),
-                colorBuilder: FixedColorBuilder(Colors.grey),
+                textStyle: const TextStyle(fontSize: 20, color: Colors.black),
+                colorBuilder: const FixedColorBuilder(Colors.grey),
                 lineHeight: 2,
               ),
             ),
             const SizedBox(height: 16),
-            if (_canResend)
-              TextButton(
-                onPressed: () {
-                  _sendCode();
-                  _startTimer();
-                },
-                child: const Text("Отправить код повторно"),
-              )
-            else
-              Text("Повторная отправка через $_secondsRemaining сек"),
+            SizedBox(
+              height: 40,
+              child:
+                  _canResend
+                      ? TextButton(
+                        onPressed: () {
+                          _sendCode();
+                          _startTimer();
+                        },
+                        child: const Text("Отправить код повторно"),
+                      )
+                      : Center(
+                        child: Text(
+                          "Повторная отправка через $_secondsRemaining сек",
+                        ),
+                      ),
+            ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _code.length == 6 ? _submitCode : null,
+              onPressed:
+                  (_code.length == 6 && !_isLoading) ? _submitCode : null,
               style: ElevatedButton.styleFrom(
-                disabledBackgroundColor: Colors.grey.shade800,
-                disabledForegroundColor: Colors.white30,
+                disabledBackgroundColor: Colors.grey.shade300,
+                disabledForegroundColor: Colors.grey.shade500,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 14,
@@ -216,7 +242,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text("Подтвердить"),
+              child:
+                  _isLoading
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Text("Подтвердить"),
             ),
           ],
         ),

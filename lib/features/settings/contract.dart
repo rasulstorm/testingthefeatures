@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/appColor.dart';
-import 'package:intl/intl.dart'; 
+import 'package:ISS/appstyles.dart'; // Исправлен путь к appstyles.dart
+import 'package:intl/intl.dart';
+import 'package:ISS/l10n/app_localizations.dart'; // Импорт локализации
 
 final contractsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final prefs = await SharedPreferences.getInstance();
@@ -28,7 +30,7 @@ final contractsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async
     '/user/contracts',
     options: Options(headers: {'Authorization': '$newAccessToken'}),
   );
-  
+
   if (response.data is List) {
     return List<Map<String, dynamic>>.from(response.data);
   }
@@ -41,18 +43,31 @@ class ContractsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contractsAsyncValue = ref.watch(contractsProvider);
+    final localizations = AppLocalizations.of(context)!; // Получаем объект локализации
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Мои контракты'),
+      backgroundColor: AppColors.getBackgroundColor(context),
+      appBar: AppBar( // ДОБАВЛЕН AppBar
+        leading: BackButton( // Кнопка "Назад"
+          color: AppColors.getTextColor(context),
+        ),
+        title: Text(
+          localizations.myContractsTitle, // Локализованный заголовок
+          style: AppStyles.headline3(context).copyWith(
+            color: AppColors.getTextColor(context),
+          ),
+        ),
+        backgroundColor: AppColors.getBackgroundColor(context),
+        elevation: 0,
       ),
       body: contractsAsyncValue.when(
         data: (contracts) {
           if (contracts.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'У вас пока нет активных контрактов.',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                localizations.noActiveContracts, // Локализованный текст
+                style: AppStyles.bodyText1(context).copyWith(
+                    color: AppColors.getSecondaryTextColor(context)),
               ),
             );
           }
@@ -62,45 +77,32 @@ class ContractsScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final contract = contracts[index];
               final dateNextPayment = contract['dateNextPayment'] != null
-                  ? DateFormat('d MMMM y', 'ru_RU').format(DateTime.parse(contract['dateNextPayment']))
-                  : 'неизвестно';
+                  ? DateFormat('d MMMM y', localizations.localeName) // Используем localeName для форматирования
+                      .format(DateTime.parse(contract['dateNextPayment']))
+                  : localizations.unknown; // Используем локализованное "неизвестно"
 
-              return Card(
-                color: AppColors.secodnBg,
+              return Container(
                 margin: const EdgeInsets.only(bottom: 16.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
+                decoration: AppStyles.cardDecoration(context),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Контракт: ${contract['contractNumber'] ?? 'N/A'}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        '${localizations.contract}: ${contract['contractNumber'] ?? 'N/A'}', // Локализованный текст
+                        style: AppStyles.headline4(context),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Сумма: ${contract['sum'] ?? 0} ₸',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
+                        '${localizations.amountPaid}: ${contract['sum'] ?? 0} ₸', // Локализованный текст
+                        style: AppStyles.bodyText1(context),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Следующая оплата: $dateNextPayment',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
+                        '${localizations.nextPaymentDate}: $dateNextPayment', // Локализованный текст
+                        style: AppStyles.bodyText2(context),
                       ),
-                      // Здесь можно добавить больше полей контракта, если необходимо
                     ],
                   ),
                 ),
@@ -108,22 +110,32 @@ class ContractsScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+            child: CircularProgressIndicator(color: AppColors.primaryAccent)),
         error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Ошибка загрузки контрактов: ${error.toString()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(contractsProvider),
-                child: const Text('Повторить'),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  '${localizations.errorLoadingContracts}: ${error.toString()}', // Локализованный текст
+                  textAlign: TextAlign.center,
+                  style: AppStyles.bodyText1(context)
+                      .copyWith(color: AppColors.error),
+                ),
+                const SizedBox(height: 10),
+                ElevatedButton(
+                  onPressed: () => ref.invalidate(contractsProvider),
+                  style: AppStyles.primaryButtonStyle,
+                  child: Text(localizations.retry, // Локализованный текст
+                      style: AppStyles.bodyText1(context)
+                          .copyWith(color: AppColors.textColorDark)),
+                ),
+              ],
+            ),
           ),
         ),
       ),

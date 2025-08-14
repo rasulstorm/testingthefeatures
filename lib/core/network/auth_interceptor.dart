@@ -1,46 +1,29 @@
+// lib/core/network/auth_interceptor.dart
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'package:ISS/core/network/auth_service.dart';
+import 'package:go_router/go_router.dart';
+import 'package:ISS/main.dart';
 
 class AuthInterceptor extends Interceptor {
   final Dio dio;
+  final AuthService _authService;
   bool _isRefreshing = false;
-  final List<Function(String)> _queuedRequests = [];
+  final List<RequestOptions> _queuedRequests = [];
+  final List<Completer<Response>> _completers = [];
 
-  AuthInterceptor(this.dio);
-
-  Future<String?> _refreshToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final refreshToken = prefs.getString('refreshToken');
-    if (refreshToken == null) return null;
-
-    try {
-      final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
-      final response = await refreshDio.post('/account-management/refresh', data: {
-        'refreshToken': refreshToken,
-      });
-
-      final data = response.data['data'];
-      final newAccessToken = data['accessToken'] as String?;
-      final newRefreshToken = data['refreshToken'] as String?;
-
-      if (newAccessToken == null || newRefreshToken == null) {
-        throw Exception('Неверный ответ от сервера');
-      }
-
-      await prefs.setString('accessToken', newAccessToken);
-      await prefs.setString('refreshToken', newRefreshToken);
-
-      return newAccessToken;
-    } catch (e) {
-      return null;
-    }
-  }
+  AuthInterceptor(this.dio, this._authService);
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken');
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
+    if (options.path.contains('/account-management/refresh')) {
+      return handler.next(options);
+    }
+
+    final token = await _authService.getAccessToken();
 
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -50,88 +33,108 @@ class AuthInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !_isRefreshing) {
-      _isRefreshing = true;
-
-      final newToken = await _refreshToken();
-      _isRefreshing = false;
-
-      if (newToken != null) {
-        final options = err.requestOptions;
-        options.headers['Authorization'] = 'Bearer $newToken';
-
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    // Проверяем, является ли ошибка 401 Unauthorized и не является ли это запросом на refresh
+    if (err.response?.statusCode == 401 &&
+        !err.requestOptions.path.contains('/account-management/refresh')) {
+      // Если токен истек и мы уже не обновляем
+      if (!_isRefreshing) {
+        _isRefreshing = true;
+        String? newToken;
         try {
-          final response = await dio.fetch(options);
-          for (final callback in _queuedRequests) {
-            callback(newToken);
+          newToken =
+              await _authService.refreshAccessToken(); // Попытка обновить токен
+        } catch (e) {
+          // Если refresh не удался (например, refresh token тоже истек)
+          _isRefreshing = false;
+          _clearQueueAndRedirect(
+            err,
+            handler,
+          ); // Очищаем очередь и перенаправляем
+          return; // Выходим
+        }
+
+        if (newToken != null) {
+          // Если новый токен получен успешно, выполняем все запросы из очереди
+          for (int i = 0; i < _queuedRequests.length; i++) {
+            final requestOptions = _queuedRequests[i];
+            final completer = _completers[i];
+            requestOptions.headers['Authorization'] = 'Bearer $newToken';
+            try {
+              final response = await dio.fetch(requestOptions);
+              completer.complete(response);
+            } on DioException catch (e) {
+              completer.completeError(e);
+            }
           }
           _queuedRequests.clear();
+          _completers.clear();
 
-          return handler.resolve(response);
-        } catch (e) {
-          return handler.reject(err);
+          // Повторяем изначальный запрос, который вызвал 401
+          final originalRequestOptions = err.requestOptions;
+          originalRequestOptions.headers['Authorization'] = 'Bearer $newToken';
+          try {
+            final response = await dio.fetch(originalRequestOptions);
+            _isRefreshing = false; // Сбрасываем флаг после успешного повтора
+            return handler.resolve(response);
+          } on DioException catch (e) {
+            _isRefreshing = false; // Сбрасываем флаг
+            _clearQueueAndRedirect(
+              e,
+              handler,
+            ); // Если повторный запрос также провалился
+            return;
+          }
+        } else {
+          // Если newToken null (не удалось обновить токен, но исключения не было)
+          _clearQueueAndRedirect(
+            err,
+            handler,
+          ); // Очищаем очередь и перенаправляем
+          return;
         }
       } else {
-        _queuedRequests.clear();
-        return handler.reject(err);
-      }
-    }
-    if (err.response?.statusCode == 401 && _isRefreshing) {
-      final completer = Completer<Response>();
+        // Если токен истек, но уже идет процесс обновления, ставим запрос в очередь
+        final completer = Completer<Response>();
+        _queuedRequests.add(err.requestOptions);
+        _completers.add(completer);
 
-      _queuedRequests.add((String newToken) async {
         try {
-          final retryOptions = err.requestOptions;
-          retryOptions.headers['Authorization'] = 'Bearer $newToken';
-          final retryResponse = await dio.fetch(retryOptions);
-          completer.complete(retryResponse);
-        } catch (e) {
-          completer.completeError(e);
+          final result = await completer.future;
+          return handler.resolve(result);
+        } on DioException catch (e) {
+          return handler.reject(
+            e,
+          ); // Отклоняем запрос, если он провалился из очереди
         }
-      });
-
-      try {
-        final result = await completer.future;
-        return handler.resolve(result);
-      } catch (e) {
-        return handler.reject(err);
       }
     }
 
+    // Для всех остальных ошибок
     return handler.next(err);
   }
-}
 
-// Утильная функция для получения валидного токена (для WebSocket)
-Future<String> getValidAccessToken(Dio dio) async {
-  final prefs = await SharedPreferences.getInstance();
-  String? accessToken = prefs.getString('accessToken');
-
-  if (accessToken == null || accessToken.isEmpty) {
-    final refreshToken = prefs.getString('refreshToken');
-    if (refreshToken == null) throw Exception('Refresh token missing');
-
-    final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
-    final refreshResp = await refreshDio.post('/account-management/refresh', data: {'refreshToken': refreshToken});
-
-    if (refreshResp.statusCode == 200) {
-      final data = refreshResp.data['data'];
-      accessToken = data['accessToken'] as String?;
-      final newRefreshToken = data['refreshToken'] as String?;
-      if (accessToken == null || newRefreshToken == null) {
-        throw Exception('Invalid refresh response');
+  // Вспомогательный метод для очистки очереди и перенаправления на логин
+  void _clearQueueAndRedirect(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) {
+    for (final completer in _completers) {
+      if (!completer.isCompleted) {
+        completer.completeError(err); // Завершаем ожидающие запросы с ошибкой
       }
-      await prefs.setString('accessToken', accessToken);
-      await prefs.setString('refreshToken', newRefreshToken);
-    } else {
-      throw Exception('Failed to refresh token');
     }
-  }
+    _queuedRequests.clear();
+    _completers.clear();
+    _isRefreshing = false; // Убедимся, что флаг сброшен
 
-  if (accessToken.startsWith('Bearer ')) {
-    accessToken = accessToken.substring(7);
+    // Перенаправляем на экран логина
+    if (navigatorKey.currentContext != null) {
+      GoRouter.of(navigatorKey.currentContext!).go('/login');
+    }
+    handler.reject(err); // Отклоняем оригинальный запрос
   }
-
-  return accessToken;
 }

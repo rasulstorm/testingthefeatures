@@ -1,9 +1,8 @@
 name: ISS
 description: "ISS.AI"
-
 publish_to: "none"
 
-version: 2.0.7+16
+version: 2.2.1+1
 
 environment:
   sdk: ^3.7.0
@@ -11,24 +10,64 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  web_socket_channel: ^2.3.0  
+
+  # Голос / wake-word / NLU
+  # picovoice_flutter помечен как discontinued, но раз уже используешь – оставляем.
+  # В дорожной карте ниже — миграция на porcupine_flutter + rhino_flutter напрямую.
+  picovoice_flutter: ^3.0.4
+  rhino_flutter: ^3.0.4
+  speech_to_text: ^6.6.0
+  flutter_tts: ^3.8.5
+
+  # UI / навигация / утилиты
+  pinput: ^5.0.0
+  uuid: ^4.4.2
+  image_picker: ^1.0.4
+  go_router: ^14.8.1
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
-  go_router: ^14.8.1
-  flutter_native_splash: ^2.4.5
-  dio: ^5.8.0+1
-  shared_preferences: ^2.5.2
-  intl: ^0.20.2
-  flutter_local_notifications: ^18.0.1
-  flutter_svg: ^2.0.10+1
+  flutter_svg: ^2.2.0
+  flutter_staggered_grid_view: ^0.7.0
   mask_text_input_formatter: ^2.4.0
-  webview_flutter: ^4.9.0
-  sms_autofill: ^2.3.0
-  flutter_launcher_icons: ^0.13.1
-  firebase_core: ^2.30.0
-  firebase_messaging: ^14.7.10
   collection: ^1.17.1
-  url_launcher: ^6.3.1
+  intl: ^0.20.2
+
+  # Локаль/хранилище/сеть/веб
+  dio: ^5.9.0
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.2
+  web_socket_channel: ^2.4.0
+  webview_flutter: ^4.13.0
+  webview_flutter_wkwebview: ^3.23.0
+
+  # Гео/фон/пермишены/безопасность/сеть
+  geolocator: ^12.0.0
+  background_fetch: ^1.3.0
+  permission_handler: ^12.0.1
+  local_auth: ^2.1.8
+  flutter_secure_storage: ^9.0.0
+  network_info_plus: ^5.0.3
+  wifi_scan: ^0.4.1
+
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Firebase (оставляем текущие мажоры)
+  firebase_core: ^2.32.0
+  firebase_messaging: ^14.7.10
+
+  # Локализация
+  flutter_localizations:
+    sdk: flutter
+
+  # Splash / иконки
+  flutter_native_splash: ^2.4.6
+  flutter_launcher_icons: ^0.13.1
+
+  # Разное
+  app_settings: ^6.1.1
+  sms_autofill: ^2.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -36,6 +75,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/data/users.json
     - assets/data/subscription.json
@@ -49,6 +89,8 @@ flutter:
     - assets/images/iosSplash.jpeg
     - assets/images/ios.png
     - assets/images/android_icon.png
+    - assets/images/home_background.jpg
+    - assets/picovoice/
 
 flutter_native_splash:
   color: "#000000"

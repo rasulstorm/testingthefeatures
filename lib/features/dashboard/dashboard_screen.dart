@@ -1,59 +1,63 @@
 // lib/features/dashboard/dashboard_screen.dart
 
-import 'package:ISS/features/main_menu_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart'; // Keep if you use GoRouter elsewhere
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:ISS/appColor.dart'; // Updated import if path changed
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
+import 'package:ISS/appColor.dart';
+import 'package:ISS/appstyles.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:ISS/l10n/app_localizations.dart';
 
-// Helper function for making GET requests with automatic token refresh
+// --- ПРОВАЙДЕРЫ ---
+
+final cardListProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+  (ref) async {
+    try {
+      final response = await dioGetWithRefresh('/card/');
+
+      // ИСПРАВЛЕНИЕ ЗДЕСЬ: Сервер возвращает список напрямую, без ключа 'data'.
+      final List data = response.data;
+
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print('Error fetching card list: $e');
+      rethrow;
+    }
+  },
+);
+
+// --- СУЩЕСТВУЮЩИЕ ПРОВАЙДЕРЫ (остаются без изменений) ---
+
 Future<Response> dioGetWithRefresh(String path) async {
   final prefs = await SharedPreferences.getInstance();
-
   final refreshToken = prefs.getString('refreshToken');
   if (refreshToken == null || refreshToken.isEmpty) {
     throw Exception('Refresh token not found. Please log in again.');
   }
-
   try {
-    // Use a new Dio instance for the refresh call to avoid interceptor recursion
-    final refreshDio = Dio(BaseOptions(
-      baseUrl: dio.options.baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-    ));
-
+    final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
     final refreshResp = await refreshDio.post(
       '/account-management/refresh',
       data: {'refreshToken': refreshToken},
     );
-
     if (refreshResp.statusCode == 200) {
       final data = refreshResp.data['data'];
       final newAccessToken = data['accessToken'];
       final newRefreshToken = data['refreshToken'];
-
       await prefs.setString('accessToken', newAccessToken);
       await prefs.setString('refreshToken', newRefreshToken);
-
-      // Use the global dio instance for the main request
-      final response = await dio.get(
+      return await dio.get(
         path,
         options: Options(headers: {'Authorization': 'Bearer $newAccessToken'}),
       );
-      return response;
     } else {
       throw DioException(
         requestOptions: refreshResp.requestOptions,
         response: refreshResp,
-        type: DioExceptionType.badResponse,
-        error: "Failed to refresh token: ${refreshResp.statusCode}",
       );
     }
   } catch (e) {
@@ -64,7 +68,9 @@ Future<Response> dioGetWithRefresh(String path) async {
   }
 }
 
-final subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+final subscriptionProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((
+  ref,
+) async {
   try {
     final response = await dioGetWithRefresh('/user/contracts');
     final data = response.data;
@@ -78,126 +84,18 @@ final subscriptionProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   }
 });
 
-final paymentsProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
-  try {
-    final response = await dioGetWithRefresh('/payment/');
-    final List data = response.data;
-    return data.map((e) => Map<String, dynamic>.from(e)).toList();
-  } catch (e) {
-    print('Error fetching payments: $e');
-    rethrow;
-  }
-});
-
-final hasCardProvider = FutureProvider<bool>((ref) async {
-  try {
-    final response = await dioGetWithRefresh('/card/');
-    final data = response.data;
-    return data is List && data.isNotEmpty;
-  } catch (e) {
-    print('Error fetching hasCard: $e');
-    rethrow;
-  }
-});
-
-final cardInfoProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
-  try {
-    final response = await dioGetWithRefresh('/card/');
-    final data = response.data;
-    if (data is List && data.isNotEmpty) {
-      return Map<String, dynamic>.from(data.first);
+final paymentsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>(
+  (ref) async {
+    try {
+      final response = await dioGetWithRefresh('/payment/');
+      final List data = response.data;
+      return data.map((e) => Map<String, dynamic>.from(e)).toList();
+    } catch (e) {
+      print('Error fetching payments: $e');
+      rethrow;
     }
-    return null;
-  } catch (e) {
-    print('Error fetching card info: $e');
-    rethrow;
-  }
-});
-
-class CardBindingWebViewPage extends ConsumerWidget {
-  final String htmlContent;
-
-  const CardBindingWebViewPage({super.key, required this.htmlContent});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onNavigationRequest: (request) {
-                final url = request.url;
-                if (url.contains('success')) {
-                  ref.invalidate(subscriptionProvider);
-                  ref.invalidate(hasCardProvider);
-                  ref.invalidate(paymentsProvider);
-                  ref.invalidate(cardInfoProvider);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Карта успешно привязана')),
-                  );
-                  return NavigationDecision.prevent;
-                }
-
-                if (url.contains('error') || url.contains('fail')) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ошибка при привязке карты')),
-                  );
-                  return NavigationDecision.prevent;
-                }
-
-                return NavigationDecision.navigate;
-              },
-              onWebResourceError: (error) {
-                if (error.description.contains('favicon') ||
-                    error.errorCode == -6) {
-                  return;
-                }
-
-                debugPrint(
-                  'WebView error: ${error.errorCode} | ${error.description}',
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Ошибка загрузки WebView: ${error.description}',
-                    ),
-                  ),
-                );
-              },
-            ),
-          )
-          ..loadRequest(Uri.parse(htmlContent));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Привязка карты'),
-        backgroundColor: AppColors.secodnBg, // Using AppColors
-        foregroundColor: AppColors.heading, // Using AppColors
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(context).pop(),
-            color: AppColors.heading, // Using AppColors
-          ),
-        ],
-      ),
-      body: WebViewWidget(controller: controller),
-    );
-  }
-}
-
-Future<String> fetchBindCardHtml() async {
-  final response = await dio.get('/card/save');
-  if (response.statusCode == 200) {
-    return response.data.toString();
-  }
-  throw Exception('Ошибка загрузки HTML');
-}
+  },
+);
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -210,285 +108,430 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      ref.invalidate(subscriptionProvider);
-      ref.invalidate(hasCardProvider);
-      ref.invalidate(paymentsProvider);
-      ref.invalidate(cardInfoProvider);
-    });
+    Future.microtask(() => _refreshAllData());
+  }
+
+  Future<void> _refreshAllData() async {
+    ref.invalidate(subscriptionProvider);
+    ref.invalidate(paymentsProvider);
+    ref.invalidate(cardListProvider);
+  }
+
+  Future<void> _openTicketUrl(String? urlString) async {
+    final localizations = AppLocalizations.of(context)!;
+    if (urlString == null || urlString.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(localizations.receiptNotAvailable)),
+      );
+      return;
+    }
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.inAppWebView)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${localizations.couldNotOpenReceipt}: $urlString'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _setPrimaryCard(String cardId) async {
+    final localizations = AppLocalizations.of(context)!;
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(child: CircularProgressIndicator()),
+      );
+      await dio.post('/card/setPrimaryFlag', data: {'cardId': cardId});
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizations.primaryCardSetSuccess),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _refreshAllData();
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizations.primaryCardSetError),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _bindCardAction() async {
+    final localizations = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final html = await fetchBindCardHtml();
+      if (mounted) {
+        Navigator.of(context).pop();
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CardBindingWebViewPage(htmlContent: html),
+          ),
+        );
+        _refreshAllData();
+      }
+    } catch (_) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(localizations.errorLoadingBindForm),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     final subscription = ref.watch(subscriptionProvider);
-    final hasCard = ref.watch(hasCardProvider);
-    final cardInfo = ref.watch(cardInfoProvider);
     final payments = ref.watch(paymentsProvider);
+    final cardList = ref.watch(cardListProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Главная'),
-        backgroundColor: AppColors.secodnBg, // Using AppColors
-        foregroundColor: AppColors.heading, // Using AppColors
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed:
-                () => showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => const MainMenuSheet(),
-                ),
-            color: AppColors.heading, // Using AppColors
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            subscription.when(
-              data:
-                  (data) => hasCard.when(
-                    data: (isAttached) {
-                      if (data == null || !isAttached) {
-                        return buildNoSubscriptionCard(context);
-                      } else {
-                        return buildActiveSubscriptionCard(data, cardInfo);
-                      }
-                    },
-                    loading:
-                        () => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
-                    error:
-                        (err, _) => buildErrorWidget(
-                              ref,
-                              hasCardProvider,
-                              'Ошибка получения карты',
-                            ),
-                  ),
-              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
-              error:
-                  (err, _) => buildErrorWidget(
-                        ref,
-                        subscriptionProvider,
-                        'Ошибка загрузки подписки',
-                      ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "История платежей",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.heading, // Using AppColors
+      backgroundColor: AppColors.getBackgroundColor(context),
+      body: RefreshIndicator(
+        onRefresh: _refreshAllData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              subscription.when(
+                data:
+                    (data) => cardList.when(
+                      data: (cards) {
+                        if (data == null || cards.isEmpty) {
+                          return buildNoSubscriptionCard(
+                            context,
+                            localizations,
+                          );
+                        } else {
+                          return buildActiveSubscriptionCard(
+                            context,
+                            localizations,
+                            data,
+                            cards,
+                          );
+                        }
+                      },
+                      loading: () => Center(child: CircularProgressIndicator()),
+                      error:
+                          (err, _) => buildErrorWidget(
+                            ref,
+                            cardListProvider,
+                            localizations.errorLoadingCardInfo,
+                          ),
+                    ),
+                loading: () => Center(child: CircularProgressIndicator()),
+                error:
+                    (err, _) => buildErrorWidget(
+                      ref,
+                      subscriptionProvider,
+                      localizations.errorLoadingSubscription,
+                    ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: Container(
-                color: AppColors.background, // Using AppColors
-                child: payments.when(
-                  data:
-                      (list) => ListView.builder(
-                            itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final payment = list[index];
-                              final status = payment['status'] == true;
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                  horizontal: 12,
+              const SizedBox(height: 30),
+              Text(localizations.myCards, style: AppStyles.headline4(context)),
+              const SizedBox(height: 10),
+              cardList.when(
+                data: (cards) => buildCardList(context, localizations, cards),
+                loading: () => Center(child: CircularProgressIndicator()),
+                error:
+                    (err, _) => buildErrorWidget(
+                      ref,
+                      cardListProvider,
+                      localizations.errorLoadingCardInfo,
+                    ),
+              ),
+              const SizedBox(height: 30),
+              Text(
+                localizations.paymentHistory,
+                style: AppStyles.headline4(context),
+              ),
+              const SizedBox(height: 10),
+              payments.when(
+                data:
+                    (list) =>
+                        list.isEmpty
+                            ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 20.0,
                                 ),
-                                color: AppColors.secodnBg, // Using AppColors
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                child: Text(
+                                  localizations.noPaymentRecords,
+                                  style: AppStyles.bodyText2(context),
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: ListTile(
-                                    tileColor: AppColors.secodnBg, // Using AppColors
-                                    isThreeLine: true,
-                                    title: Text(
-                                      "Сумма: ${payment['amount']} ₸",
-                                      style: const TextStyle(
-                                        color: AppColors.heading, // Using AppColors
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
+                              ),
+                            )
+                            : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: list.length,
+                              itemBuilder: (context, index) {
+                                final payment = list[index];
+                                final status = payment['status'] == true;
+                                final ticketUrl = payment['ticketURL'];
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  child: InkWell(
+                                    onTap:
+                                        ticketUrl != null
+                                            ? () => _openTicketUrl(ticketUrl)
+                                            : null,
+                                    borderRadius: AppStyles.borderRadiusAll(12),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  "${localizations.amount}: ${payment['amount']} ₸",
+                                                  style: AppStyles.bodyText1(
+                                                    context,
+                                                  ).copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              Icon(
+                                                status
+                                                    ? Icons.check_circle
+                                                    : Icons.error,
+                                                color:
+                                                    status
+                                                        ? AppColors.success
+                                                        : AppColors.error,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "${localizations.date}: ${DateFormat('d MMMM y', 'ru_RU').format(DateTime.parse(payment['dateOfPayment']))}",
+                                            style: AppStyles.bodyText2(context),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "${localizations.description}: ${payment['description']}",
+                                            style: AppStyles.bodyText2(context),
+                                          ),
+                                          if (ticketUrl != null) ...[
+                                            const SizedBox(height: 12),
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: TextButton.icon(
+                                                icon: Icon(
+                                                  Icons.receipt_long,
+                                                  size: 18,
+                                                ),
+                                                label: Text(
+                                                  localizations.viewReceipt,
+                                                ),
+                                                onPressed:
+                                                    () => _openTicketUrl(
+                                                      ticketUrl,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     ),
-                                    subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          "Дата: ${DateFormat('d MMMM y', 'ru_RU').format(DateTime.parse(payment['dateOfPayment']))}",
-                                          style: const TextStyle(color: AppColors.text), // Using AppColors
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          "Описание: ${payment['description']}",
-                                          style: const TextStyle(
-                                            color: AppColors.text, // Using AppColors
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: Icon(
-                                      status ? Icons.check_circle : Icons.error,
-                                      color:
-                                          status
-                                              ? AppColors.iconGreen
-                                              : AppColors.iconRed, // Using AppColors
-                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
-                  loading:
-                      () => const Center(
-                              child: CircularProgressIndicator(color: AppColors.primary), // Using AppColors
+                                );
+                              },
                             ),
-                  error:
-                      (err, _) => buildErrorWidget(
-                            ref,
-                            paymentsProvider,
-                            'Ошибка загрузки платежей',
-                          ),
-                ),
+                loading: () => Center(child: CircularProgressIndicator()),
+                error:
+                    (err, _) => buildErrorWidget(
+                      ref,
+                      paymentsProvider,
+                      localizations.errorLoadingPayments,
+                    ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget buildNoSubscriptionCard(BuildContext context) {
-    return Card(
-      elevation: 2,
-      color: AppColors.secodnBg, // Using AppColors
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const Text(
-              "Подписка не активна",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.heading), // Using AppColors
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () async {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder:
-                      (_) => const Center(child: CircularProgressIndicator(color: AppColors.primary)), // Using AppColors
-                );
-                try {
-                  final html = await fetchBindCardHtml();
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder:
-                            (_) => CardBindingWebViewPage(htmlContent: html),
-                      ),
-                    );
-                  }
-                } catch (_) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ошибка загрузки формы привязки'),
-                      backgroundColor: AppColors.iconRed, // Using AppColors
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary, // Using AppColors
-                foregroundColor: AppColors.heading, // Using AppColors
+  Widget buildCardList(
+    BuildContext context,
+    AppLocalizations localizations,
+    List<Map<String, dynamic>> cards,
+  ) {
+    return Container(
+      decoration: AppStyles.cardDecoration(context),
+      child: Column(
+        children: [
+          if (cards.isEmpty)
+            ListTile(
+              title: Center(
+                child: Text(
+                  localizations.noCards,
+                  style: AppStyles.bodyText2(context),
+                ),
               ),
-              child: const Text("Привязать карту"),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: cards.length,
+              separatorBuilder: (context, index) => Divider(height: 1),
+              itemBuilder: (context, index) {
+                final card = cards[index];
+                final bool isPrimary = card['isPrimary'] ?? false;
+                final String cardId = card['id'] ?? '';
+                return ListTile(
+                  leading: Icon(
+                    Icons.credit_card,
+                    color: AppColors.primaryAccent,
+                  ),
+                  title: Text(
+                    card['cardMask'] ?? '**** **** **** ****',
+                    style: AppStyles.bodyText1(context),
+                  ),
+                  subtitle:
+                      isPrimary
+                          ? Text(
+                            localizations.primaryCard,
+                            style: AppStyles.bodyText2(context).copyWith(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                          : null,
+                  trailing:
+                      isPrimary
+                          ? Icon(Icons.star, color: Colors.amber)
+                          : TextButton(
+                            child: Text(localizations.makePrimary),
+                            onPressed:
+                                cardId.isNotEmpty
+                                    ? () => _setPrimaryCard(cardId)
+                                    : null,
+                          ),
+                );
+              },
             ),
-          ],
-        ),
+          Divider(height: 1),
+          ListTile(
+            leading: Icon(
+              Icons.add_circle_outline,
+              color: AppColors.primaryAccent,
+            ),
+            title: Text(
+              localizations.bindNewCard,
+              style: AppStyles.bodyText1(
+                context,
+              ).copyWith(color: AppColors.primaryAccent),
+            ),
+            onTap: _bindCardAction,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildNoSubscriptionCard(
+    BuildContext context,
+    AppLocalizations localizations,
+  ) {
+    return Container(
+      decoration: AppStyles.cardDecoration(context),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Text(
+            localizations.subscriptionNotActive,
+            style: AppStyles.headline4(context),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _bindCardAction,
+            style: AppStyles.primaryButtonStyle,
+            child: Text(
+              localizations.bindCard,
+              style: AppStyles.bodyText1(
+                context,
+              ).copyWith(color: AppColors.textColorDark),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget buildActiveSubscriptionCard(
+    BuildContext context,
+    AppLocalizations localizations,
     Map<String, dynamic> data,
-    AsyncValue<Map<String, dynamic>?> cardInfo,
+    List<Map<String, dynamic>> cards,
   ) {
     final sum = data['sum'] ?? 0;
     final dateNext =
         data['dateNextPayment'] != null
             ? DateFormat(
-                'd MMMM y',
-                'ru_RU',
-              ).format(DateTime.parse(data['dateNextPayment']))
-            : 'неизвестно';
+              'd MMMM y',
+              'ru_RU',
+            ).format(DateTime.parse(data['dateNextPayment']))
+            : localizations.unknown;
+    final primaryCard = cards.firstWhere(
+      (c) => c['isPrimary'] == true,
+      orElse: () => {},
+    );
 
-    return Card(
-      elevation: 2,
-      color: AppColors.secodnBg, // Using AppColors
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "Абонентская плата: $sum ₸",
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.heading, // Using AppColors
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Статус: Активна",
-              style: TextStyle(fontSize: 16, color: AppColors.iconGreen), // Using AppColors for green status
-            ),
-            const SizedBox(height: 8),
-            cardInfo.when(
-              data: (card) {
-                final cardMask = card?['cardMask'] ?? '';
-                return Text(
-                  "Карта: $cardMask",
-                  style: const TextStyle(fontSize: 14, color: AppColors.text), // Using AppColors
-                );
-              },
-              loading: () => const CircularProgressIndicator(color: AppColors.primary), // Using AppColors
-              error:
-                  (err, _) => const Text(
-                        "Ошибка загрузки карты",
-                        style: TextStyle(color: AppColors.iconRed), // Using AppColors
-                      ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Следующее списание: $dateNext",
-              style: const TextStyle(color: AppColors.text), // Using AppColors
-            ),
-            const SizedBox(height: 12),
-            // Удалена строка с кнопкой "Связаться с поддержкой"
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Карта привязана",
-                  style: TextStyle(color: AppColors.heading, fontSize: 16), // Using AppColors
-                ),
-                // Здесь раньше был TextButton.icon для "Связаться с поддержкой"
-              ],
-            ),
-          ],
-        ),
+    return Container(
+      decoration: AppStyles.cardDecoration(context),
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "${localizations.monthlyFee}: $sum ₸",
+            style: AppStyles.headline4(context),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "${localizations.status}: ${localizations.active}",
+            style: AppStyles.bodyText1(
+              context,
+            ).copyWith(color: AppColors.success),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "${localizations.primaryCard}: ${primaryCard['cardMask'] ?? localizations.notAttached}",
+            style: AppStyles.bodyText2(context),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "${localizations.nextCharge}: $dateNext",
+            style: AppStyles.bodyText2(context),
+          ),
+        ],
       ),
     );
   }
@@ -501,17 +544,77 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(message, style: const TextStyle(color: AppColors.iconRed)), // Using AppColors
+        Text(
+          message,
+          style: AppStyles.bodyText2(context).copyWith(color: AppColors.error),
+        ),
         const SizedBox(height: 8),
         ElevatedButton(
           onPressed: () => ref.invalidate(provider),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary, // Using AppColors
-            foregroundColor: AppColors.heading, // Using AppColors
+          style: AppStyles.primaryButtonStyle,
+          child: Text(
+            'Обновить',
+            style: AppStyles.bodyText1(
+              context,
+            ).copyWith(color: AppColors.textColorDark),
           ),
-          child: const Text('Обновить'),
         ),
       ],
     );
   }
+}
+
+class CardBindingWebViewPage extends ConsumerWidget {
+  final String htmlContent;
+  const CardBindingWebViewPage({super.key, required this.htmlContent});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller =
+        WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setNavigationDelegate(
+            NavigationDelegate(
+              onNavigationRequest: (request) {
+                final url = request.url;
+                if (url.contains('success')) {
+                  ref.invalidate(cardListProvider);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Карта успешно привязана'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  return NavigationDecision.prevent;
+                }
+                if (url.contains('error') || url.contains('fail')) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Ошибка при привязке карты'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return NavigationDecision.prevent;
+                }
+                return NavigationDecision.navigate;
+              },
+            ),
+          )
+          ..loadRequest(Uri.parse(htmlContent));
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Привязка карты')),
+      body: WebViewWidget(controller: controller),
+    );
+  }
+}
+
+Future<String> fetchBindCardHtml() async {
+  final response = await dio.get('/card/save');
+  if (response.statusCode == 200) {
+    return response.data.toString();
+  }
+  throw Exception('Ошибка загрузки HTML');
 }
