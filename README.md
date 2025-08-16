@@ -103,7 +103,6 @@ graph TD
 
   models --> U
   W --> models
-
 ```
 ```mermaid
 flowchart TB
@@ -132,8 +131,6 @@ flowchart TB
 
   actions -->|Rename| rename[PUT /family-group/{groupId}/update-group-name?name=]
   actions -->|Transfer owner| transfer[POST /family-group/{groupId}/transfer-ownership/{memberId}]
-
-
 ```
 
 
