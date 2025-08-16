@@ -16,17 +16,45 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 # ISS Mobile Architecture
+# ISS Mobile (Flutter App)
 
-## 1. System Context
+Приложение для управления хабами и системой безопасности с поддержкой **семейного доступа**.  
+Стек: **Flutter**, **Riverpod**, **Dio**, **WebSockets**, **GoRouter**.  
+
+## 📱 Основные фичи
+- Управление хабами (ARM/DISARM, мониторинг, привязка/отвязка).
+- Семейный доступ: группы, роли (OWNER/ADMIN/USER/GUEST).
+- Управление участниками и их правами.
+- Работа через REST API и WebSocket.
+
+---
+
+## 📂 Структура проекта
+lib/
+├─ core/ # Базовые вещи: dio_provider, стили
+├─ features/ # Фичи приложения
+│ ├─ home/ # Главный экран
+│ ├─ family_access/ # Семейный доступ (группы, права, UI)
+│ ├─ security_control/ # Управление безопасностью (WebSocket)
+│ └─ settings/ # Настройки
+├─ models/ # Модели данных (Group, Hub, Member и т.д.)
+├─ services/ # Логика работы с API (hub_service, family_group_service)
+├─ widgets/ # Переиспользуемые UI-компоненты
+└─ main.dart # Точка входа
+---
+
+## 🏗 Архитектура
+
+### 1. System Context
 ```mermaid
 flowchart LR
   user([Пользователь iOS/Android])
 
-  subgraph app[Flutter App (ISS Mobile)]
-    ui[UI (Screens & Widgets)]
-    prov[State: Riverpod Providers]
-    svc[Services: Dio/WebSocket]
-    models[Models + Parsers + Utils]
+  subgraph app["Flutter App (ISS Mobile)"]
+    ui["UI (Screens & Widgets)"]
+    prov["State: Riverpod Providers"]
+    svc["Services: Dio/WebSocket"]
+    models["Models + Parsers + Utils"]
 
     ui --> prov
     prov --> svc
@@ -34,7 +62,7 @@ flowchart LR
     ui --> models
   end
 
-  subgraph backend[Backend API]
+  subgraph backend["Backend API"]
     http[(REST API /api/v1)]
     ws[(WebSocket)]
   end
@@ -42,11 +70,6 @@ flowchart LR
   user --> app
   svc --> http
   svc --- ws
-
----
-
-## 2. Layers Inside App
-```mermaid
 graph TD
   A[features/home] --> P[providers/*]
   A --> W[widgets/*]
@@ -86,18 +109,13 @@ graph TD
 
   models --> U
   W --> models
-
----
-
-## 3. Navigation Family Groups
-```mermaid
 flowchart TB
   settings[SettingsScreen] -->|tap "Семейный доступ"| groups[FamilyGroupsScreen (список)]
   groups -->|tap item| groupDetails[FamilyGroupScreen (детали)]
 
   subgraph FamilyGroupsScreen
-    groups -->|Pull/Refresh| getMyGroups[/GET /family-group/ (service)\]
-    groups -->|Delete group| deleteGroup[/DELETE /family-group/{groupId}/delete\]
+    groups -->|Pull/Refresh| getMyGroups[GET /family-group/]
+    groups -->|Delete group| deleteGroup[DELETE /family-group/{groupId}/delete]
   end
 
   subgraph FamilyGroupScreen
@@ -106,21 +124,17 @@ flowchart TB
     groupDetails --> actions[Действия с группой]
   end
 
-  hubs -->|Attach| attach[/POST /family-group/{groupId}/hub/{hubId}/attach\]
-  hubs -->|Detach| detach[/POST /family-group/{groupId}/hub/{hubId}/dettach\]
-  hubs -->|ARM| arm[/POST /family-group/{groupId}/arm-security/{hubId}\]
-  hubs -->|DISARM (PIN)| disarm[/POST /family-group/{groupId}/disarm-security/{hubId}\]
+  hubs -->|Attach| attach[POST /family-group/{groupId}/hub/{hubId}/attach]
+  hubs -->|Detach| detach[POST /family-group/{groupId}/hub/{hubId}/dettach]
+  hubs -->|ARM| arm[POST /family-group/{groupId}/arm-security/{hubId}]
+  hubs -->|DISARM (PIN)| disarm[POST /family-group/{groupId}/disarm-security/{hubId}]
 
-  members -->|Add| addMember[/POST /family-group/add-member/{groupId}\]
-  members -->|Change role| updRole[/PUT /family-group/{memberId}/update-member-role\]
-  members -->|Delete| delMember[/DELETE /family-group/{memberId}/delete-member\]
-  actions -->|Rename| rename[/PUT /family-group/{groupId}/update-group-name?name=\]
-  actions -->|Transfer owner| transfer[/POST /family-group/{groupId}/transfer-ownership/{memberId}\]
+  members -->|Add| addMember[POST /family-group/add-member/{groupId}]
+  members -->|Change role| updRole[PUT /family-group/{memberId}/update-member-role]
+  members -->|Delete| delMember[DELETE /family-group/{memberId}/delete-member]
 
----
-
-## 4. Roles & Permissions
-```mermaid
+  actions -->|Rename| rename[PUT /family-group/{groupId}/update-group-name?name=]
+  actions -->|Transfer owner| transfer[POST /family-group/{groupId}/transfer-ownership/{memberId}]
 classDiagram
   class OWNER {
     +Полный доступ
@@ -140,4 +154,3 @@ classDiagram
   OWNER <|-- ADMIN
   ADMIN <|-- USER
   USER <|-- GUEST
----
