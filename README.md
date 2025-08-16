@@ -62,4 +62,3 @@ flowchart LR
   user --> app
   svc --> http
   svc --- ws
-nsfer[POST /family-group/{groupId}/transfer-ownership/{memberId}]
