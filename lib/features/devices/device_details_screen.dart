@@ -5,7 +5,6 @@ import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/models/device_models.dart';
 import 'package:ISS/features/security_control/ws_provider.dart';
-import 'package:ISS/utils/device_utils.dart';
 import 'package:ISS/utils/device_parser.dart';
 
 class DeviceDetailsScreen extends ConsumerStatefulWidget {

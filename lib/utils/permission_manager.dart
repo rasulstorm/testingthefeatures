@@ -9,7 +9,7 @@ import 'package:ISS/l10n/app_localizations.dart';
 class PermissionManager {
   // Универсальный метод для запроса геолокации
   static Future<bool> requestLocationPermission(BuildContext context) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     // 1. Сначала проверяем текущий статус
     var status = await Permission.locationWhenInUse.status;
 
@@ -48,7 +48,7 @@ class PermissionManager {
     required String title,
     required String content,
   }) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return showDialog(
       context: context,
       builder:
@@ -70,14 +70,14 @@ class PermissionManager {
                 onPressed: () => Navigator.pop(dialogContext),
               ),
               ElevatedButton(
-                child: Text(
-                  localizations.generalSettings,
-                ), // TODO: "В настройки"
                 style: AppStyles.primaryButtonStyle,
                 onPressed: () {
                   openAppSettings(); // Открывает системные настройки этого приложения
                   Navigator.pop(dialogContext);
                 },
+                child: Text(
+                  localizations.generalSettings,
+                ),
               ),
             ],
           ),

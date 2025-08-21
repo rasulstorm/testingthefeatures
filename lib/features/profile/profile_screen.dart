@@ -90,7 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // Функция для сохранения изменений
   Future<void> _updateProfile() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     if (!_isDirty) return; // Не отправляем запрос, если ничего не изменилось
 
     setState(() => _isLoading = true);
@@ -135,7 +135,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     String title,
     TextEditingController controller,
   ) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     await showDialog(
       context: context,
       builder: (dialogContext) {
@@ -183,8 +183,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Navigator.pop(dialogContext);
               },
               style: AppStyles.primaryButtonStyle.copyWith(
-                minimumSize: MaterialStateProperty.all(Size.zero),
-                padding: MaterialStateProperty.all(
+                minimumSize: WidgetStateProperty.all(Size.zero),
+                padding: WidgetStateProperty.all(
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
               ),
@@ -201,7 +201,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(

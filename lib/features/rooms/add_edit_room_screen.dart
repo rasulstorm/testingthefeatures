@@ -69,7 +69,7 @@ class _AddEditRoomScreenState extends ConsumerState<AddEditRoomScreen> {
   }
 
   Future<void> _deleteRoom() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder:
@@ -126,7 +126,7 @@ class _AddEditRoomScreenState extends ConsumerState<AddEditRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final isEditing = widget.room != null;
 
     return Scaffold(

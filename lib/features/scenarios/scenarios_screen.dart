@@ -12,7 +12,7 @@ class ScenariosScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final localizations = AppLocalizations.of(context)!; // Для локализации
+    final localizations = AppLocalizations.of(context); // Для локализации
     return Scaffold(
       appBar: AppBar(
         title: Text(

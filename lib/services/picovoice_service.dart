@@ -74,17 +74,19 @@ class PicovoiceService extends StateNotifier<PicovoiceState> {
       return;
     }
 
-    if (kDebugMode)
+    if (kDebugMode) {
       print("PICOVOICE: Ключевое слово обнаружено! Слушаю команду...");
+    }
     state = PicovoiceState.listeningForCommand;
 
     _commandTimeout?.cancel();
     _commandTimeout = Timer(const Duration(seconds: 5), () {
       if (state == PicovoiceState.listeningForCommand) {
-        if (kDebugMode)
+        if (kDebugMode) {
           print(
             "PICOVOICE: Таймаут команды. Возвращаюсь к ожиданию wake word.",
           );
+        }
         state = PicovoiceState.listeningForWakeWord;
       }
     });
@@ -122,8 +124,9 @@ class PicovoiceService extends StateNotifier<PicovoiceState> {
   Future<bool> _checkPermission() async {
     var status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print("PICOVOICE: Разрешение на микрофон не предоставлено.");
+      }
       return false;
     }
     return true;

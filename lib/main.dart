@@ -14,6 +14,10 @@ import 'package:ISS/initial_loading_screen.dart';
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/l10n/app_localizations.dart';
+import 'package:ISS/features/family/group_list_screen.dart';
+import 'package:ISS/features/family/group_create_screen.dart';
+import 'package:ISS/features/family/group_manage_screen.dart';
+import 'package:ISS/features/family/family_access_screen.dart';
 import 'package:ISS/core/network/auth_service.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/services/local_auth_service.dart';
@@ -35,11 +39,6 @@ import 'package:ISS/features/notifications/notifications_provider.dart';
 import 'package:ISS/features/scenarios/scenarios_screen.dart';
 import 'package:ISS/features/scenarios/scenario_creation_screen.dart';
 import 'package:ISS/features/wifi_setup/wifi_setup_screen.dart';
-
-import 'package:ISS/features/family_access/family_groups_screen.dart';
-import 'package:ISS/features/family_access/create_family_group_screen.dart';
-import 'package:ISS/features/family_access/family_group_details_screen.dart';
-
 import 'package:ISS/features/rooms/add_edit_room_screen.dart';
 import 'package:ISS/features/rooms/assign_devices_screen.dart';
 import 'package:ISS/models/space_model.dart';
@@ -158,7 +157,6 @@ class MyApp extends ConsumerWidget {
       brightness: brightness,
       primaryColor: AppColors.primaryAccent,
       scaffoldBackgroundColor: bg,
-      dialogBackgroundColor: card,
       cardColor: card,
       appBarTheme: AppBarTheme(
         backgroundColor: bg,
@@ -186,9 +184,7 @@ class MyApp extends ConsumerWidget {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: AppStyles.primaryButtonStyle.copyWith(
-          minimumSize: MaterialStateProperty.all(
-            const Size(double.infinity, 50),
-          ),
+          minimumSize: WidgetStateProperty.all(const Size(double.infinity, 50)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -215,13 +211,13 @@ class MyApp extends ConsumerWidget {
         hintStyle: TextStyle(fontSize: 14, color: hint),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
             return AppColors.primaryAccent;
           }
           return hint;
         }),
-        checkColor: MaterialStateProperty.all(AppColors.textColorDark),
+        checkColor: WidgetStateProperty.all(AppColors.textColorDark),
       ),
       cardTheme: CardThemeData(
         color: card,
@@ -236,16 +232,17 @@ class MyApp extends ConsumerWidget {
         iconColor: secondaryText,
       ),
       switchTheme: SwitchThemeData(
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return AppColors.primaryAccent;
           }
           return hint;
         }),
-        thumbColor: MaterialStateProperty.all(AppColors.textColorDark),
+        thumbColor: WidgetStateProperty.all(AppColors.textColorDark),
       ),
       popupMenuTheme: PopupMenuThemeData(color: card),
       bottomSheetTheme: BottomSheetThemeData(backgroundColor: card),
+      dialogTheme: DialogThemeData(backgroundColor: card),
     );
   }
 
@@ -364,30 +361,30 @@ final GoRouter _router = GoRouter(
       path: '/wifi-setup',
       builder: (context, state) => const WifiSetupScreen(),
     ),
-
-    // Семейный доступ
-    GoRoute(
-      path: '/family-groups',
-      builder: (context, state) => const FamilyGroupsScreen(),
-    ),
-    GoRoute(
-      path: '/create-family-group',
-      builder: (context, state) => const CreateFamilyGroupScreen(),
-    ),
-    GoRoute(
-      path: '/family-group-details',
-      builder: (context, state) {
-        final group = state.extra as Map<String, dynamic>;
-        return FamilyGroupDetailsScreen(group: group);
-      },
-    ),
-
     // Комнаты
     GoRoute(
       path: '/add-room',
       builder: (context, state) {
         final space = state.extra as Space;
         return AddEditRoomScreen(space: space);
+      },
+    ),
+    GoRoute(
+      path: '/family/list',
+      builder: (context, state) => const GroupListScreen(),
+    ),
+    GoRoute(
+      path: '/family/create',
+      builder: (context, state) => const GroupCreateScreen(),
+    ),
+    GoRoute(
+      path: '/family/manage',
+      builder: (context, state) {
+        final extra = (state.extra ?? const {}) as Map<String, dynamic>;
+        return GroupManageScreen(
+          groupId: extra['groupId'] as String,
+          name: extra['name'] as String? ?? '',
+        );
       },
     ),
     GoRoute(

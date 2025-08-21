@@ -1,10 +1,8 @@
 // lib/utils/device_utils.dart
-
 import 'package:flutter/material.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/models/device_models.dart';
 import 'package:ISS/widgets/status_indicator_card.dart';
-import 'package:ISS/appColor.dart';
 
 class IndicatorValue {
   final String label;
@@ -31,8 +29,10 @@ class GroupedStatusIndicator {
 class DeviceUtils {
   // --- ИСПРАВЛЕННЫЙ МЕТОД ---
   static List<BaseDevice> getControllableDevices(List<BaseDevice> allDevices) {
-    // Фильтруем список, оставляя только те элементы, которые "подмешали" в себя ControllableDevice
-    return allDevices.where((device) => device is ControllableDevice).toList();
+    return allDevices
+        .whereType<ControllableDevice>()
+        .cast<BaseDevice>()
+        .toList();
   }
 
   static List<StatusIndicator> createStatusIndicators(

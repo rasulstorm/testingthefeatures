@@ -1,7 +1,6 @@
 // lib/features/auth/login_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -17,6 +16,8 @@ final emailProvider = StateProvider<String?>((ref) => null);
 final passwordProvider = StateProvider<String?>((ref) => null);
 
 class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }

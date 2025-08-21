@@ -8,7 +8,6 @@ import 'package:ISS/features/rooms/rooms_providers.dart';
 import 'package:ISS/features/rooms/rooms_service.dart';
 import 'package:ISS/models/device_models.dart';
 import 'package:ISS/models/space_model.dart';
-import 'package:ISS/providers/hubs_provider.dart';
 import 'package:ISS/utils/device_utils.dart';
 
 class AssignDevicesScreen extends ConsumerStatefulWidget {

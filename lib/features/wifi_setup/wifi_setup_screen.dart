@@ -65,7 +65,7 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
   // УДАЛЕНО: Метод _pollHubStatus больше не нужен
 
   Future<void> _connectWifi() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     setState(() {
       _errorMessage = '';
       _statusMessage = '';
@@ -191,7 +191,7 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(

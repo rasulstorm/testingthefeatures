@@ -92,7 +92,15 @@
     <string>UIInterfaceOrientationLandscapeLeft</string>
     <string>UIInterfaceOrientationLandscapeRight</string>
   </array>
+  <key>NSLocalNetworkUsageDescription</key>
+<string>Приложению нужен доступ к локальной сети для подключения к устройствам</string>
 
+<key>NSBonjourServices</key>
+<array>
+    <string>_dartobservatory._tcp</string>
+    <string>_http._tcp</string>
+    <string>_ws._tcp</string>
+</array>
   <key>UIViewControllerBasedStatusBarAppearance</key>
   <false/>
 </dict>

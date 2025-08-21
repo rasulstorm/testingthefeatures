@@ -63,7 +63,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
     _failedAttempts = await pinCodeService.getPinAttempts();
     if (_failedAttempts >= PinCodeService.maxPinAttempts) {
       setState(() {
-        _errorMessage = AppLocalizations.of(context)!.pinLockedOut;
+        _errorMessage = AppLocalizations.of(context).pinLockedOut;
       });
       if (widget.onAuthFailed != null) {
         widget.onAuthFailed!();
@@ -72,7 +72,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
   }
 
   String get _title {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     switch (widget.mode) {
       case PinCodeMode.create:
         return localizations.createPinTitle;
@@ -90,7 +90,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
   }
 
   String get _description {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     switch (widget.mode) {
       case PinCodeMode.create:
         return localizations.createPinDescription;
@@ -113,7 +113,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
     });
 
     final pinCodeService = ref.read(pinCodeServiceProvider);
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
 
     if (widget.mode == PinCodeMode.create) {
       context.pushReplacement(
@@ -295,7 +295,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
                 validator: (pin) {
                   if (widget.mode == PinCodeMode.verify &&
                       _failedAttempts >= PinCodeService.maxPinAttempts) {
-                    return AppLocalizations.of(context)!.pinLockedOut;
+                    return AppLocalizations.of(context).pinLockedOut;
                   }
                   if (pin == null || pin.length < 4) {
                     return 'Введите 4-значный PIN-код'; // Замените на локализованную строку
@@ -311,7 +311,7 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
                   child: Text(
                     AppLocalizations.of(
                       context,
-                    )!.attemptsRemaining(_failedAttempts),
+                    ).attemptsRemaining(_failedAttempts),
                     style: AppStyles.bodyText2(
                       context,
                     ).copyWith(color: AppColors.error),
@@ -328,9 +328,9 @@ class _PinCodeScreenState extends ConsumerState<PinCodeScreen> {
                     context.go('/login'); // Принудительный выход на логин
                   },
                   style: AppStyles.primaryButtonStyle.copyWith(
-                    backgroundColor: MaterialStateProperty.all(AppColors.error),
+                    backgroundColor: WidgetStateProperty.all(AppColors.error),
                   ),
-                  child: Text(AppLocalizations.of(context)!.loginWithPassword),
+                  child: Text(AppLocalizations.of(context).loginWithPassword),
                 ),
             ],
           ),

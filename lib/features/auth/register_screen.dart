@@ -5,13 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:ISS/appcolor.dart';
 import 'package:ISS/appstyles.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -723,18 +723,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           ? null
                           : _register,
                   style: AppStyles.primaryButtonStyle.copyWith(
-                    backgroundColor: MaterialStateProperty.resolveWith<Color>((
-                      Set<MaterialState> states,
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((
+                      Set<WidgetState> states,
                     ) {
-                      if (states.contains(MaterialState.disabled)) {
+                      if (states.contains(WidgetState.disabled)) {
                         return AppColors.getLightGreyColor(context);
                       }
                       return AppColors.primaryAccent;
                     }),
-                    foregroundColor: MaterialStateProperty.resolveWith<Color>((
-                      Set<MaterialState> states,
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((
+                      Set<WidgetState> states,
                     ) {
-                      if (states.contains(MaterialState.disabled)) {
+                      if (states.contains(WidgetState.disabled)) {
                         return AppColors.secondaryTextColorDark;
                       }
                       return AppColors.textColorDark;

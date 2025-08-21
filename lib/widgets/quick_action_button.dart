@@ -8,11 +8,11 @@ class QuickActionButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const QuickActionButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.icon,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

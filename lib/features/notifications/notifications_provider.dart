@@ -139,7 +139,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsState = ref.watch(notificationsProvider);
     final notificationsNotifier = ref.read(notificationsProvider.notifier);
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(

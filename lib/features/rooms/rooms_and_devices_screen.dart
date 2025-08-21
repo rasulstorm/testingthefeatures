@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/providers/hubs_provider.dart';
@@ -85,7 +86,7 @@ class RoomsAndDevicesScreen extends ConsumerWidget {
                   if (name.isEmpty) return;
                   Navigator.pop(ctx);
                   await service.createRoom(spaceId, name);
-                  // тянем свежий getObjects, чтобы rooms обновились
+                  // подтягиваем свежий getObjects, чтобы rooms обновились
                   await ref.refresh(hubsProvider.future);
                 },
                 child: const Text('Создать'),
@@ -224,12 +225,12 @@ class _RoomCard extends ConsumerWidget {
     final devices = ref.watch(roomDevicesProvider(room.id));
 
     return DragTarget<String>(
-      onWillAccept: (deviceId) => deviceId != null,
-      onAccept: (deviceId) async {
+      onWillAcceptWithDetails: (details) => details.data != null,
+      onAcceptWithDetails: (details) async {
+        final deviceId = details.data;
         await ref
             .read(roomsServiceProvider)
             .assignDeviceToRoom(deviceId, room.id);
-        // обновляем список: getObjects для комнат, и конкретную комнату для девайсов
         await ref.refresh(hubsProvider.future);
         ref.invalidate(roomDevicesProvider(room.id));
         ref.invalidate(unassignedDevicesProvider(hubCommandId));
@@ -390,10 +391,22 @@ class _DeviceTile extends ConsumerWidget {
     return 'Устройство';
   }
 
+  String _friendlyOrId(BaseDevice d) {
+    final fn = (d.friendlyName).trim();
+    if (fn.isEmpty) return d.id;
+    final lower = fn.toLowerCase();
+    if (lower.startsWith('unknown') || lower == 'unknown_friendly_name') {
+      return d.id;
+    }
+    return fn;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final live =
-        ref.watch(webSocketNotifierProvider).deviceData[device.friendlyName];
+    // Пытаемся взять live по id, если нет — по friendlyName (чтобы ничего не сломать)
+    final wsMap = ref.watch(webSocketNotifierProvider).deviceData;
+    final live = wsMap[device.id] ?? wsMap[device.friendlyName];
+
     final current =
         live != null
             ? DeviceParser.parse({...device.rawData, ...live})
@@ -401,7 +414,6 @@ class _DeviceTile extends ConsumerWidget {
 
     String statusText = 'Нет данных';
     Color statusColor = AppColors.getSecondaryTextColor(context);
-    bool hasArrow = current is ControllableDevice;
 
     if (current is OnOffSwitchDevice) {
       statusText = current.isOn ? 'Вкл' : 'Выкл';
@@ -434,6 +446,7 @@ class _DeviceTile extends ConsumerWidget {
     }
 
     final parsedName = _parsedTypeName(current);
+    final subtitleText = _friendlyOrId(current); // показываем friendly либо ID
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -447,13 +460,13 @@ class _DeviceTile extends ConsumerWidget {
           color: statusColor,
         ),
         title: Text(
-          parsedName,
+          parsedName, // читаемое название типа (распарсенное)
           style: AppStyles.bodyText1(context),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          current.friendlyName,
+          subtitleText, // либо нормальное имя, либо ID (если было unknown)
           style: AppStyles.caption(context),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -469,27 +482,25 @@ class _DeviceTile extends ConsumerWidget {
                   context,
                 ).copyWith(color: statusColor, fontWeight: FontWeight.w600),
               ),
-              if (hasArrow) const SizedBox(width: 8),
-              if (hasArrow)
-                Icon(
-                  Icons.chevron_right,
-                  color: AppColors.getSecondaryTextColor(context),
-                ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.getSecondaryTextColor(context),
+              ),
             ],
           ),
         ),
         onTap: () {
-          if (hasArrow) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder:
-                    (_) => DeviceDetailsScreen(
-                      device: current,
-                      commandHubId: hubCommandId,
-                    ),
-              ),
-            );
-          }
+          // Открываем детали для любого девайса (даже не-контролируемого)
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder:
+                  (_) => DeviceDetailsScreen(
+                    device: current,
+                    commandHubId: hubCommandId,
+                  ),
+            ),
+          );
         },
       ),
     );
@@ -508,6 +519,16 @@ class _UnassignedDevicesSection extends ConsumerWidget {
     if (d is DimmableLightDevice) return 'Свет (диммируемый)';
     if (d is OnOffSwitchDevice) return 'Реле / Выключатель';
     return 'Устройство';
+  }
+
+  String _friendlyOrId(BaseDevice d) {
+    final fn = (d.friendlyName).trim();
+    if (fn.isEmpty) return d.id;
+    final lower = fn.toLowerCase();
+    if (lower.startsWith('unknown') || lower == 'unknown_friendly_name') {
+      return d.id;
+    }
+    return fn;
   }
 
   @override
@@ -547,18 +568,19 @@ class _UnassignedDevicesSection extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               ...list.map((d) {
-                final live =
-                    ref.watch(webSocketNotifierProvider).deviceData[d
-                        .friendlyName];
+                // Тот же двойной ключ: id -> friendlyName
+                final wsMap = ref.watch(webSocketNotifierProvider).deviceData;
+                final live = wsMap[d.id] ?? wsMap[d.friendlyName];
                 final current =
                     live != null
                         ? DeviceParser.parse({...d.rawData, ...live})
                         : d;
+
                 final parsedName = _parsedTypeName(current);
+                final subtitleText = _friendlyOrId(current);
 
                 String statusText = 'Нет данных';
                 Color statusColor = AppColors.getSecondaryTextColor(context);
-                bool hasArrow = current is ControllableDevice;
 
                 if (current is OnOffSwitchDevice) {
                   statusText = current.isOn ? 'Вкл' : 'Выкл';
@@ -592,31 +614,29 @@ class _UnassignedDevicesSection extends ConsumerWidget {
                     child: _tile(
                       context,
                       parsedName,
+                      subtitleText,
                       current,
                       statusText,
                       statusColor,
-                      hasArrow,
                     ),
                   ),
                   child: _tile(
                     context,
                     parsedName,
+                    subtitleText,
                     current,
                     statusText,
                     statusColor,
-                    hasArrow,
                     onTap:
-                        hasArrow
-                            ? () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder:
-                                    (_) => DeviceDetailsScreen(
-                                      device: current,
-                                      commandHubId: hubCommandId,
-                                    ),
-                              ),
-                            )
-                            : null,
+                        () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder:
+                                (_) => DeviceDetailsScreen(
+                                  device: current,
+                                  commandHubId: hubCommandId,
+                                ),
+                          ),
+                        ),
                   ),
                 );
               }),
@@ -647,10 +667,10 @@ class _UnassignedDevicesSection extends ConsumerWidget {
   Widget _tile(
     BuildContext context,
     String parsedName,
+    String subtitleText, // friendly или id
     BaseDevice current,
     String statusText,
-    Color statusColor,
-    bool hasArrow, {
+    Color statusColor, {
     VoidCallback? onTap,
   }) {
     return Card(
@@ -671,7 +691,7 @@ class _UnassignedDevicesSection extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          current.friendlyName,
+          subtitleText, // показываем id, если имя unknown_*
           style: AppStyles.caption(context),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -687,12 +707,11 @@ class _UnassignedDevicesSection extends ConsumerWidget {
                   context,
                 ).copyWith(color: statusColor),
               ),
-              if (hasArrow) const SizedBox(width: 8),
-              if (hasArrow)
-                Icon(
-                  Icons.chevron_right,
-                  color: AppColors.getSecondaryTextColor(context),
-                ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.getSecondaryTextColor(context),
+              ),
             ],
           ),
         ),

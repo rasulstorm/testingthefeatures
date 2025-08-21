@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
-import 'package:ISS/l10n/app_localizations.dart';
 
 class StatusIndicator {
   final String label;
@@ -24,8 +23,7 @@ class StatusIndicator {
 class CompactStatusIndicatorCard extends StatelessWidget {
   final StatusIndicator indicator;
 
-  const CompactStatusIndicatorCard({Key? key, required this.indicator})
-    : super(key: key);
+  const CompactStatusIndicatorCard({super.key, required this.indicator});
 
   @override
   Widget build(BuildContext context) {

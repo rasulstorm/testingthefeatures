@@ -118,7 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _openTicketUrl(String? urlString) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     if (urlString == null || urlString.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.receiptNotAvailable)),
@@ -136,7 +136,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _setPrimaryCard(String cardId) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     try {
       showDialog(
         context: context,
@@ -164,7 +164,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _bindCardAction() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -196,7 +196,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final subscription = ref.watch(subscriptionProvider);
     final payments = ref.watch(paymentsProvider);
     final cardList = ref.watch(cardListProvider);
@@ -428,11 +428,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       isPrimary
                           ? Icon(Icons.star, color: Colors.amber)
                           : TextButton(
-                            child: Text(localizations.makePrimary),
                             onPressed:
                                 cardId.isNotEmpty
                                     ? () => _setPrimaryCard(cardId)
                                     : null,
+                            child: Text(localizations.makePrimary),
                           ),
                 );
               },

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ISS/l10n/app_localizations.dart';
-import 'package:ISS/core/network/auth_service.dart';
-import 'package:ISS/services/local_auth_service.dart';
 import 'package:ISS/main.dart'; // для провайдеров authServiceProvider/localAuthServiceProvider
 
 class InitialLoadingScreen extends ConsumerStatefulWidget {
@@ -27,7 +25,7 @@ class _InitialLoadingScreenState extends ConsumerState<InitialLoadingScreen> {
     await Future.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
 
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final localAuthService = ref.read(localAuthServiceProvider);
     final authService = ref.read(authServiceProvider);
 
@@ -84,7 +82,7 @@ class _InitialLoadingScreenState extends ConsumerState<InitialLoadingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(

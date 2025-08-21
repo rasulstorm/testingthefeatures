@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dio/dio.dart';
-import 'package:dio/io.dart'; // Keep this if it's used for debug mode SSL bypass
+// Keep this if it's used for debug mode SSL bypass
 import 'package:ISS/core/network/dio_provider.dart'; // Assuming this path is correct
 
 import 'package:ISS/appcolor.dart'; // Import AppColors
@@ -66,7 +65,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Ошибка при смене пароля: ${e}',
+              'Ошибка при смене пароля: $e',
               style: AppStyles.bodyText2(context).copyWith(color: AppColors.textColorDark),
             ),
             backgroundColor: AppColors.error, // Use new error color

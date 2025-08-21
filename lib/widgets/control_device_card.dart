@@ -8,29 +8,48 @@ import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/models/device_models.dart';
 import 'package:ISS/features/security_control/ws_provider.dart';
 import 'package:ISS/utils/device_utils.dart';
-import 'package:ISS/utils/device_parser.dart'; // <-- Важный импорт
+import 'package:ISS/utils/device_parser.dart';
 
 class ControlDeviceCard extends ConsumerWidget {
   final BaseDevice device;
   final String commandHubId;
 
   const ControlDeviceCard({
-    Key? key,
+    super.key,
     required this.device,
     required this.commandHubId,
-  }) : super(key: key);
+  });
+
+  // Подпись под типом: показываем дружелюбное имя, если оно не unknown; иначе — id
+  String _labelFriendlyOrId(BaseDevice d) {
+    final fn = d.friendlyName.trim();
+    if (fn.isEmpty) return d.id;
+    final lower = fn.toLowerCase();
+    if (lower.startsWith('unknown')) return d.id;
+    return fn;
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
+    final liveMap = ref.watch(webSocketNotifierProvider).deviceData;
 
-    // --- ИСПРАВЛЕНИЕ: Теперь мы берем "живые" данные из провайдера ---
-    final liveData =
-        ref.watch(webSocketNotifierProvider).deviceData[device.friendlyName];
-    // Сливаем исходные данные с "живыми" и пере-парсим, чтобы получить самый актуальный объект
+    // 1) live сначала по id, а friendlyName — только если он уникальный (не unknown)
+    Map<String, dynamic>? liveFor(BaseDevice d) {
+      final byId = liveMap[d.id];
+      if (byId != null) return byId;
+      final fn = d.friendlyName.trim();
+      if (fn.isEmpty) return null;
+      final lower = fn.toLowerCase();
+      if (lower.startsWith('unknown')) return null;
+      return liveMap[fn];
+    }
+
+    // 2) Сливаем и перепарсим, чтобы получить актуальный тип/поля
+    final live = liveFor(device);
     final currentDevice =
-        liveData != null
-            ? DeviceParser.parse({...device.rawData, ...liveData})
+        live != null
+            ? DeviceParser.parse({...device.rawData, ...live})
             : device;
 
     final bool isOn =
@@ -51,8 +70,8 @@ class ControlDeviceCard extends ConsumerWidget {
       localizations,
     );
     final mainIcon = DeviceUtils.getIconForDevice(currentDevice);
-    String subStatusText = isOn ? localizations.on : localizations.off;
 
+    String subStatusText = isOn ? localizations.on : localizations.off;
     if (currentDevice is DimmableLightDevice) {
       final brightnessPercent =
           ((currentDevice.brightness / 254) * 100).round();
@@ -60,6 +79,20 @@ class ControlDeviceCard extends ConsumerWidget {
           isOn
               ? '${localizations.on} • $brightnessPercent%'
               : localizations.off;
+    }
+
+    void toggle() {
+      if (currentDevice is! ControllableDevice) return;
+      final newState = !isOn;
+      final ws = ref.read(webSocketNotifierProvider.notifier);
+
+      // ВАЖНО: все локальные обновления и команды — по id
+      ws.updateDeviceLocalState(currentDevice.id, {
+        'state': newState ? 'ON' : 'OFF',
+      });
+      ws.sendDeviceCommand(commandHubId, currentDevice.id, {
+        "state": newState ? "ON" : "OFF",
+      });
     }
 
     return Container(
@@ -76,22 +109,7 @@ class ControlDeviceCard extends ConsumerWidget {
                 localizations,
                 ref,
               ),
-          onTap: () {
-            if (currentDevice is ControllableDevice) {
-              final newState = !isOn;
-              // --- ИСПРАВЛЕНИЕ: Используем friendlyName (Zigbee ID) ---
-              ref
-                  .read(webSocketNotifierProvider.notifier)
-                  .updateDeviceLocalState(currentDevice.friendlyName, {
-                    'state': newState ? 'ON' : 'OFF',
-                  });
-              ref.read(webSocketNotifierProvider.notifier).sendDeviceCommand(
-                commandHubId,
-                currentDevice.friendlyName,
-                {"state": newState ? "ON" : "OFF"},
-              );
-            }
-          },
+          onTap: toggle,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -109,7 +127,7 @@ class ControlDeviceCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  currentDevice.friendlyName,
+                  _labelFriendlyOrId(currentDevice),
                   style: AppStyles.caption(
                     context,
                   ).copyWith(color: textColor.withOpacity(0.8)),
@@ -135,7 +153,7 @@ class ControlDeviceCard extends ConsumerWidget {
 
 void _showDeviceControlModal(
   BuildContext context,
-  BaseDevice device, // Принимаем начальное состояние устройства
+  BaseDevice device,
   String commandHubId,
   AppLocalizations localizations,
   WidgetRef ref,
@@ -149,21 +167,37 @@ void _showDeviceControlModal(
     ),
     builder: (BuildContext bc) {
       return Consumer(
-        // Используем Consumer, чтобы модальное окно обновлялось
         builder: (context, widgetRef, child) {
-          // --- ИСПРАВЛЕНИЕ: Следим за "живыми" данными для этого устройства ---
-          final liveData =
-              widgetRef.watch(webSocketNotifierProvider).deviceData[device
-                  .friendlyName];
+          final liveMap = widgetRef.watch(webSocketNotifierProvider).deviceData;
+
+          Map<String, dynamic>? liveFor(BaseDevice d) {
+            final byId = liveMap[d.id];
+            if (byId != null) return byId;
+            final fn = d.friendlyName.trim();
+            if (fn.isEmpty) return null;
+            final lower = fn.toLowerCase();
+            if (lower.startsWith('unknown')) return null;
+            return liveMap[fn];
+          }
+
+          final live = liveFor(device);
           final currentDevice =
-              liveData != null
-                  ? DeviceParser.parse({...device.rawData, ...liveData})
+              live != null
+                  ? DeviceParser.parse({...device.rawData, ...live})
                   : device;
 
           final bool isOn =
               (currentDevice is ControllableDevice)
                   ? (currentDevice as ControllableDevice).isOn
                   : false;
+
+          String friendlyOrId(BaseDevice d) {
+            final fn = d.friendlyName.trim();
+            if (fn.isEmpty) return d.id;
+            final lower = fn.toLowerCase();
+            if (lower.startsWith('unknown')) return d.id;
+            return fn;
+          }
 
           return Padding(
             padding: EdgeInsets.only(
@@ -180,7 +214,7 @@ void _showDeviceControlModal(
                   Align(
                     alignment: Alignment.center,
                     child: Text(
-                      currentDevice.friendlyName,
+                      friendlyOrId(currentDevice),
                       style: AppStyles.headline3(
                         context,
                       ).copyWith(fontWeight: FontWeight.bold),
@@ -194,8 +228,7 @@ void _showDeviceControlModal(
                   if (currentDevice is DimmableLightDevice) ...[
                     Builder(
                       builder: (context) {
-                        final dimmableDevice =
-                            currentDevice; // Тип уже правильный
+                        final dd = currentDevice;
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -210,7 +243,7 @@ void _showDeviceControlModal(
                               children: [
                                 Expanded(
                                   child: Slider(
-                                    value: dimmableDevice.brightness.toDouble(),
+                                    value: dd.brightness.toDouble(),
                                     min: 0,
                                     max: 254,
                                     divisions: 254,
@@ -221,26 +254,26 @@ void _showDeviceControlModal(
                                               webSocketNotifierProvider
                                                   .notifier,
                                             )
-                                            .updateDeviceLocalState(
-                                              dimmableDevice.friendlyName,
-                                              {'brightness': value.toInt()},
-                                            ),
-                                    // --- ИСПРАВЛЕНИЕ: Отправляем friendlyName ---
+                                            // Локально — по id
+                                            .updateDeviceLocalState(dd.id, {
+                                              'brightness': value.toInt(),
+                                            }),
                                     onChangeEnd:
                                         (value) => widgetRef
                                             .read(
                                               webSocketNotifierProvider
                                                   .notifier,
                                             )
+                                            // Команда — по id
                                             .sendDeviceCommand(
                                               commandHubId,
-                                              dimmableDevice.friendlyName,
+                                              dd.id,
                                               {"brightness": value.toInt()},
                                             ),
                                   ),
                                 ),
                                 Text(
-                                  '${(dimmableDevice.brightness / 254 * 100).round()}%',
+                                  '${(dd.brightness / 254 * 100).round()}%',
                                   style: AppStyles.bodyText1(
                                     context,
                                   ).copyWith(fontWeight: FontWeight.bold),
@@ -300,21 +333,19 @@ Widget _buildOnOffButton(
   bool targetStateIsOn,
   bool currentStateIsOn,
 ) {
-  final localizations = AppLocalizations.of(context)!;
+  final localizations = AppLocalizations.of(context);
   final bool isActive = targetStateIsOn == currentStateIsOn;
 
   return ElevatedButton.icon(
     onPressed: () {
-      // --- ИСПРАВЛЕНИЕ: Используем friendlyName ---
-      ref.read(webSocketNotifierProvider.notifier).updateDeviceLocalState(
-        device.friendlyName,
-        {'state': targetStateIsOn ? 'ON' : 'OFF'},
-      );
-      ref.read(webSocketNotifierProvider.notifier).sendDeviceCommand(
-        commandHubId,
-        device.friendlyName,
-        {"state": targetStateIsOn ? "ON" : "OFF"},
-      );
+      final ws = ref.read(webSocketNotifierProvider.notifier);
+      // Локально и команда — только по id
+      ws.updateDeviceLocalState(device.id, {
+        'state': targetStateIsOn ? 'ON' : 'OFF',
+      });
+      ws.sendDeviceCommand(commandHubId, device.id, {
+        "state": targetStateIsOn ? "ON" : "OFF",
+      });
     },
     icon: Icon(
       targetStateIsOn ? Icons.lightbulb_sharp : Icons.lightbulb_outline,

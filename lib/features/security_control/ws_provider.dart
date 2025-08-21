@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer' as dev; // Используем dart:developer для логирования
+import 'dart:developer' as dev;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:ISS/core/network/auth_service.dart'; // Убедитесь, что этот путь правильный
+import 'package:ISS/core/network/auth_service.dart';
 
-// Модель для состояния WebSocketNotifier
 class WebSocketState {
   final bool isConnected;
   final Map<String, Map<String, dynamic>> deviceData;
@@ -23,17 +22,10 @@ class WebSocketState {
   }
 }
 
-// Провайдер для WebSocketNotifier
-// Используем authServiceProvider из dio_provider.dart или создаем локально, если authService только для WS
-final webSocketNotifierProvider = StateNotifierProvider<
-  WebSocketNotifier,
-  WebSocketState
->((ref) {
-  // Важно: если authServiceProvider не объявлен где-то глобально (например, в dio_provider.dart),
-  // его нужно объявить здесь или убедиться, что он доступен.
-  // Для простоты, инжектируем просто AuthService().
-  return WebSocketNotifier(AuthService());
-});
+final webSocketNotifierProvider =
+    StateNotifierProvider<WebSocketNotifier, WebSocketState>((ref) {
+      return WebSocketNotifier(AuthService());
+    });
 
 class WebSocketNotifier extends StateNotifier<WebSocketState> {
   final AuthService _authService;
@@ -316,26 +308,44 @@ class WebSocketNotifier extends StateNotifier<WebSocketState> {
   }
 
   // Отправка команды управления устройством
+  // Отправка команды управления устройством
   void sendDeviceCommand(
-    String commandHubId, // это будет hubId
-    String deviceName,
-    Map<String, dynamic> commandPayload, // это будет 'payload'
+    String commandHubId, // hubId
+    String deviceIdentifier, // Может быть friendlyName или deviceId
+    Map<String, dynamic> commandPayload,
   ) {
     if (_channel != null && state.isConnected) {
+      // Если имя пустое или это "unknown_friendly_name" — используем как идентификатор deviceId
+      final safeDeviceId =
+          (deviceIdentifier.isEmpty || deviceIdentifier.startsWith('unknown_'))
+              ? _findDeviceId(deviceIdentifier)
+              : deviceIdentifier;
+
       final message = jsonEncode({
         "type": "DEVICE_COMMAND",
         "hubId": commandHubId,
-        "details": {"deviceName": deviceName, "payload": commandPayload},
+        "details": {"deviceName": safeDeviceId, "payload": commandPayload},
       });
+
       _channel!.sink.add(message);
       dev.log(
-        'WebSocket: Sent DEVICE_COMMAND to hubId: $commandHubId, deviceName: $deviceName with payload: $commandPayload',
+        'WebSocket: Sent DEVICE_COMMAND to hubId: $commandHubId, deviceName: $safeDeviceId with payload: $commandPayload',
       );
     } else {
       dev.log(
-        'WebSocket: Not connected. Cannot send DEVICE_COMMAND to device ID: $deviceName',
+        'WebSocket: Not connected. Cannot send DEVICE_COMMAND to device ID: $deviceIdentifier',
       );
     }
+  }
+
+  // Вспомогательная функция — находит ID по имени, либо возвращает исходное
+  String _findDeviceId(String maybeName) {
+    // Ищем по карте state.deviceData
+    final foundKey = state.deviceData.keys.firstWhere(
+      (key) => key.isNotEmpty,
+      orElse: () => maybeName,
+    );
+    return foundKey;
   }
 
   // Метод для локального обновления состояния устройства (для UI плавности)

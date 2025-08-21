@@ -43,7 +43,7 @@ class ContractsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contractsAsyncValue = ref.watch(contractsProvider);
-    final localizations = AppLocalizations.of(context)!; // Получаем объект локализации
+    final localizations = AppLocalizations.of(context); // Получаем объект локализации
 
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),

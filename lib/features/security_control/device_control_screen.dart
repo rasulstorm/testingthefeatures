@@ -40,7 +40,7 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
           if (data['type'] == 'DEVICE_STATE_UPDATE' &&
               data['deviceId'] == deviceName) {
             state = Map<String, dynamic>.from(data['payload'] ?? {});
-            print('[WS] State updated for deviceName=$deviceName: ${state}');
+            print('[WS] State updated for deviceName=$deviceName: $state');
           } else {
             print('[WS] Message ignored for deviceName=$deviceName');
           }

@@ -5,7 +5,6 @@ import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/features/dashboard/dashboard_screen.dart';
 import 'package:intl/intl.dart';
-import 'dart:developer' as dev;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -48,7 +47,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _openTicketUrl(String? urlString) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     if (urlString == null || urlString.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.receiptNotAvailable)),
@@ -66,12 +65,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _setPrimaryCard(String cardId) async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     setState(() {
       _updatingCardId = cardId;
     });
     try {
-      // ИСПРАВЛЕНИЕ: Используем 'CardID', как требует сервер
       await dio.post(
         '/card/setPrimaryFlag',
         queryParameters: {'CardID': cardId},
@@ -101,11 +99,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
   }
 
   Future<void> _bindCardAction() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
       final html = await fetchBindCardHtml();
@@ -135,7 +133,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final subscriptionsAsync = ref.watch(subscriptionProvider);
     final paymentsAsync = ref.watch(paymentsProvider);
     final cardListAsync = ref.watch(cardListProvider);
@@ -181,7 +179,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           );
                         }
                       },
-                      loading: () => Center(child: CircularProgressIndicator()),
+                      loading:
+                          () =>
+                              const Center(child: CircularProgressIndicator()),
                       error:
                           (err, _) => _buildErrorWidget(
                             ref,
@@ -189,7 +189,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                             localizations.errorLoadingCardInfo,
                           ),
                     ),
-                loading: () => Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error:
                     (err, stack) => _buildErrorWidget(
                       ref,
@@ -202,7 +202,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               const SizedBox(height: 16),
               cardListAsync.when(
                 data: (cards) => _buildCardList(context, localizations, cards),
-                loading: () => Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error:
                     (err, _) => _buildErrorWidget(
                       ref,
@@ -232,12 +232,25 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                       ),
                     );
                   }
+
+                  // сортировка по дате — новые сверху
+                  final sortedList = List<Map<String, dynamic>>.from(list)
+                    ..sort((a, b) {
+                      final dateA =
+                          DateTime.tryParse(a['dateOfPayment'] ?? '') ??
+                          DateTime(0);
+                      final dateB =
+                          DateTime.tryParse(b['dateOfPayment'] ?? '') ??
+                          DateTime(0);
+                      return dateB.compareTo(dateA);
+                    });
+
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: list.length,
+                    itemCount: sortedList.length,
                     itemBuilder: (context, index) {
-                      final payment = list[index];
+                      final payment = sortedList[index];
                       final status = payment['status'] == true;
                       final ticketUrl = payment['ticketURL'];
                       return Card(
@@ -292,7 +305,10 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: TextButton.icon(
-                                      icon: Icon(Icons.receipt_long, size: 18),
+                                      icon: const Icon(
+                                        Icons.receipt_long,
+                                        size: 18,
+                                      ),
                                       label: Text(localizations.viewReceipt),
                                       onPressed:
                                           () => _openTicketUrl(ticketUrl),
@@ -307,7 +323,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     },
                   );
                 },
-                loading: () => Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error:
                     (err, stack) => _buildErrorWidget(
                       ref,
@@ -345,29 +361,28 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: cards.length,
-              separatorBuilder: (context, index) => Divider(height: 1),
+              separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final card = cards[index];
                 final bool isPrimary = card['isPrimary'] ?? false;
-                // ИСПРАВЛЕНИЕ: Используем ключ 'CardID' или 'id'
                 final String cardId = card['CardID'] ?? card['id'] ?? '';
 
                 Widget trailingWidget;
                 if (_updatingCardId == cardId) {
-                  trailingWidget = SizedBox(
+                  trailingWidget = const SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   );
                 } else if (isPrimary) {
-                  trailingWidget = Icon(Icons.star, color: Colors.amber);
+                  trailingWidget = const Icon(Icons.star, color: Colors.amber);
                 } else {
                   trailingWidget = TextButton(
-                    child: Text(localizations.makePrimary),
                     onPressed:
                         cardId.isNotEmpty
                             ? () => _setPrimaryCard(cardId)
                             : null,
+                    child: Text(localizations.makePrimary),
                   );
                 }
 
@@ -394,7 +409,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                 );
               },
             ),
-          Divider(height: 1),
+          const Divider(height: 1),
           ListTile(
             leading: Icon(
               Icons.add_circle_outline,
@@ -549,7 +564,7 @@ class CardBindingWebViewPage extends ConsumerWidget {
                   Navigator.of(context).pop(true);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Карта успешно привязана'),
+                      content: const Text('Карта успешно привязана'),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -559,7 +574,7 @@ class CardBindingWebViewPage extends ConsumerWidget {
                   Navigator.of(context).pop(false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Ошибка при привязке карты'),
+                      content: const Text('Ошибка при привязке карты'),
                       backgroundColor: AppColors.error,
                     ),
                   );

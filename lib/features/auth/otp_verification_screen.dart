@@ -16,7 +16,7 @@ class OtpScreen extends ConsumerStatefulWidget {
   final String? lastName;
 
   const OtpScreen({
-    Key? key,
+    super.key,
     required this.phone,
     required this.email,
     required this.password,
@@ -24,7 +24,7 @@ class OtpScreen extends ConsumerStatefulWidget {
     required this.phoneNumber,
     required this.firstName,
     required this.lastName,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<OtpScreen> createState() => _OtpScreenState();
@@ -45,6 +45,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
     _sendCode();
   }
 
+  @override
   void codeUpdated() {
     setState(() {
       _code = code ?? '';

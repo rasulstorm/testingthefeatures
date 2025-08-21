@@ -168,7 +168,7 @@ class _ScenarioCreationScreenState
   );
 
   Future<void> _saveScenario() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     if (!_formKey.currentState!.validate()) return;
     if (_selectedHub == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -214,7 +214,7 @@ class _ScenarioCreationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final hubsAsyncValue = ref.watch(hubsProvider);
 
     return Scaffold(
@@ -386,7 +386,7 @@ class _ScenarioCreationScreenState
     ScenarioTrigger trigger,
     int index,
   ) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: AppColors.getCardBackgroundColor(context),
@@ -465,7 +465,7 @@ class _ScenarioCreationScreenState
     ScenarioCondition condition,
     int index,
   ) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: AppColors.getCardBackgroundColor(context),
@@ -545,7 +545,7 @@ class _ScenarioCreationScreenState
     ScenarioAction action,
     int index,
   ) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: AppColors.getCardBackgroundColor(context),
@@ -607,7 +607,7 @@ class _ScenarioCreationScreenState
     String title,
     VoidCallback onDelete,
   ) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

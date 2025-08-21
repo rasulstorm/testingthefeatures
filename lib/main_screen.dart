@@ -63,7 +63,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
 
     final picovoiceState = ref.watch(picovoiceProvider);
 
@@ -78,7 +78,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       }
     });
 
-    final List<String> _pageTitles = <String>[
+    final List<String> pageTitles = <String>[
       localizations.homeTab,
       localizations.devicesTab,
       localizations.scenariosTab,
@@ -89,7 +89,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
       backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
         title: Text(
-          _pageTitles[_selectedIndex],
+          pageTitles[_selectedIndex],
           style: AppStyles.headline3(context),
         ),
         backgroundColor: AppColors.getBackgroundColor(context),

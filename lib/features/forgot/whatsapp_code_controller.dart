@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 final whatsappCodeControllerProvider =
     StateNotifierProvider.autoDispose<WhatsappCodeController, AsyncValue<void>>(

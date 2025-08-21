@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart'; // Import AppStyles for consistent design
-import 'package:ISS/features/about_us/about_us_screen.dart'; // Импортируем новую страницу "О нас"
+// Импортируем новую страницу "О нас"
 
 class MainMenuSheet extends StatelessWidget {
   const MainMenuSheet({super.key});
