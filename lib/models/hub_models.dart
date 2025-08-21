@@ -1,7 +1,6 @@
 // lib/models/hub_models.dart
 import 'package:ISS/models/device_models.dart';
 
-// ----- Space/Room refs (без изменений) -----
 class HubSpaceRef {
   final String id;
   final String name;

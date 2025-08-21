@@ -6,7 +6,7 @@ import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/core/network/dio_provider.dart';
-
+import 'package:ISS/features/voice/voice_mic_button.dart';
 import 'package:ISS/features/security_control/ws_provider.dart';
 import 'package:ISS/widgets/status_indicator_card.dart';
 import 'package:ISS/widgets/quick_action_button.dart';
@@ -290,6 +290,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             content: TextField(controller: c),
             actions: [
+              const VoiceMicButton(),
               TextButton(
                 onPressed: () => Navigator.pop(dCtx),
                 child: Text(loc.cancel),
@@ -717,7 +718,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final AsyncValue<List<HubObject>> hubsAsyncValue =
         isFamilyMode
             ? ref
-                .watch(fg.familyHubsProvider(groupId!))
+                .watch(fg.familyHubsProvider(groupId))
                 .whenData(
                   (list) =>
                       list
@@ -749,7 +750,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               onRefresh:
                   () =>
                       isFamilyMode
-                          ? ref.refresh(fg.familyHubsProvider(groupId!).future)
+                          ? ref.refresh(fg.familyHubsProvider(groupId).future)
                           : ref.refresh(hubsr.homeHubsProvider.future),
               child: ListView(
                 padding: const EdgeInsets.all(24),
@@ -858,7 +859,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onRefresh:
                 () =>
                     isFamilyMode
-                        ? ref.refresh(fg.familyHubsProvider(groupId!).future)
+                        ? ref.refresh(fg.familyHubsProvider(groupId).future)
                         : ref.refresh(hubsr.homeHubsProvider.future),
             color: AppColors.primaryAccent,
             backgroundColor: AppColors.getCardBackgroundColor(context),
@@ -909,7 +910,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         tooltip: 'Управление группой',
                         onPressed: () async {
                           final gid = groupId;
-                          if (gid == null) return;
 
                           // найдём имя группы
                           String groupName = 'Группа';

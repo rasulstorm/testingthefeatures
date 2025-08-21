@@ -608,6 +608,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     icon: Icons.info_outline,
                     onTap: () => context.push('/about-us'),
                   ),
+                  _divider(),
+                  _tile(
+                    title: "Голосовое управление",
+                    icon: Icons.mic,
+                    onTap: () => context.push('/voice-control'),
+                  ),
                 ],
               ),
             ),

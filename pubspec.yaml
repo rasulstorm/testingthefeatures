@@ -2,7 +2,7 @@ name: ISS
 description: "ISS.AI"
 publish_to: "none"
 
-version: 2.2.1+1
+version: 2.2.1+2
 
 environment:
   sdk: ^3.7.0
@@ -10,15 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Голос / wake-word / NLU
-  # picovoice_flutter помечен как discontinued, но раз уже используешь – оставляем.
-  # В дорожной карте ниже — миграция на porcupine_flutter + rhino_flutter напрямую.
   picovoice_flutter: ^3.0.4
   rhino_flutter: ^3.0.4
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.3.0
   flutter_tts: ^3.8.5
-
+  flutter_dotenv: ^5.2.1
   # UI / навигация / утилиты
   pinput: ^5.0.0
   uuid: ^4.4.2
@@ -32,8 +28,6 @@ dependencies:
   mask_text_input_formatter: ^2.4.0
   collection: ^1.17.1
   intl: ^0.20.2
-
-  # Локаль/хранилище/сеть/веб
   dio: ^5.9.0
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.2
@@ -91,6 +85,7 @@ flutter:
     - assets/images/ios.png
     - assets/images/android_icon.png
     - assets/images/home_background.jpg
+    - .env
     - assets/picovoice/
 
 flutter_native_splash:

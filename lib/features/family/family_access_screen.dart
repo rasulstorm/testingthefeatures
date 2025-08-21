@@ -6,9 +6,9 @@ import 'package:ISS/appstyles.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 
-// ВАЖНО: даём алиасы, чтобы явно ссылаться на провайдеры
+// ВАЖНО: провайдеры семейного доступа — из providers/*
 import 'package:ISS/providers/family_group_providers.dart' as fprov;
-import 'package:ISS/models/hub_models.dart';
+// Твои хабы (личные) — как были
 import 'package:ISS/providers/hubs_provider.dart' as hprov;
 
 class FamilyAccessScreen extends ConsumerStatefulWidget {
@@ -47,20 +47,21 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
         if (_selectedHubForCreate.isNotEmpty) 'hubId': _selectedHubForCreate,
       };
       await dio.post('/family-group/create', data: body);
+
       if (!mounted) return;
       _groupNameCtrl.clear();
       _inviteEmailCtrl.clear();
       _selectedHubForCreate = '';
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Группа создана')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Группа создана')));
       ref.invalidate(fprov.familyGroupsProvider);
-      ref.invalidate(fprov.familyAllHubsProvider);
+      // список хабов подтянем уже при раскрытии конкретной группы
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка создания: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка создания: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -76,15 +77,15 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
         queryParameters: {'name': newName.trim()},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Имя группы изменено')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Имя группы изменено')));
       ref.invalidate(fprov.familyGroupsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,16 +100,16 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
         data: {'email': email.trim(), 'role': role}, // ADMIN / USER
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Участник добавлен')),
-      );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Участник добавлен')));
+      // состав группы обычно приходит вместе с /family-group
       ref.invalidate(fprov.familyGroupsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -117,21 +118,22 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
   Future<void> _deleteMember(String groupId, String memberId) async {
     setState(() => _busy = true);
     try {
+      // твой текущий бекенд может ожидать другой маршрут (например: /family-group/{memberId}/delete-member)
+      // оставляю как у тебя — через query memberId
       await dio.delete(
         '/family-group/$groupId/delete-member',
         queryParameters: {'memberId': memberId},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Участник удалён')),
-      );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Участник удалён')));
       ref.invalidate(fprov.familyGroupsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -140,20 +142,23 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
   Future<void> _updateRole(String groupId, String memberId, String role) async {
     setState(() => _busy = true);
     try {
+      // у тебя в описании было /family-group/{memberId}/update-member-role,
+      // но в исходном коде ты дергал /family-group/$groupId/update-member-role?memberId=...
+      // Оставляю как в твоём коде, чтобы не ломать текущий бекенд.
       await dio.put(
         '/family-group/$groupId/update-member-role',
         queryParameters: {'memberId': memberId, 'role': role},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Роль изменена на $role')),
-      );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Роль изменена на $role')));
+      ref.invalidate(fprov.familyGroupsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -163,18 +168,19 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     if (newOwnerUserId.trim().isEmpty) return;
     setState(() => _busy = true);
     try {
-      await dio.post('/family-group/$groupId/transfer-ownership/$newOwnerUserId');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Владение передано')),
+      await dio.post(
+        '/family-group/$groupId/transfer-ownership/$newOwnerUserId',
       );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Владение передано')));
       ref.invalidate(fprov.familyGroupsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -186,17 +192,18 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     try {
       await dio.post('/family-group/$groupId/hub/$hubId/attach');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Хаб прикреплён')),
-      );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
-      ref.invalidate(fprov.familyAllHubsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Хаб прикреплён')));
+      ref.invalidate(
+        fprov.familyHubsProvider(groupId),
+      ); // ТОЛЬКО для этой группы
       ref.invalidate(hprov.hubsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -207,17 +214,16 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     try {
       await dio.post('/family-group/$groupId/hub/$hubId/dettach');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Хаб откреплён')),
-      );
-      ref.invalidate(fprov.familyGroupDetailsProvider(groupId));
-      ref.invalidate(fprov.familyAllHubsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Хаб откреплён')));
+      ref.invalidate(fprov.familyHubsProvider(groupId));
       ref.invalidate(hprov.hubsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -228,16 +234,16 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     try {
       await dio.post('/family-group/$groupId/arm-security/$hubId');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Поставлено на охрану')),
-      );
-      ref.invalidate(fprov.familyAllHubsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Поставлено на охрану')));
+      ref.invalidate(fprov.familyHubsProvider(groupId));
       ref.invalidate(hprov.hubsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -248,16 +254,16 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     try {
       await dio.post('/family-group/$groupId/disarm-security/$hubId');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Снято с охраны')),
-      );
-      ref.invalidate(fprov.familyAllHubsProvider);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Снято с охраны')));
+      ref.invalidate(fprov.familyHubsProvider(groupId));
       ref.invalidate(hprov.hubsProvider);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -268,7 +274,6 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     final loc = AppLocalizations.of(context);
 
     final groupsAsync = ref.watch(fprov.familyGroupsProvider);
-    final familyHubsAsync = ref.watch(fprov.familyAllHubsProvider);
     final ownHubsAsync = ref.watch(hprov.hubsProvider);
 
     return Scaffold(
@@ -277,11 +282,9 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(fprov.familyGroupsProvider);
-          ref.invalidate(fprov.familyAllHubsProvider);
           ref.invalidate(hprov.hubsProvider);
           await Future.wait([
             ref.read(fprov.familyGroupsProvider.future),
-            ref.read(fprov.familyAllHubsProvider.future),
             ref.read(hprov.hubsProvider.future),
           ]);
         },
@@ -313,7 +316,7 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
                   ownHubsAsync.when(
                     data: (hubs) {
                       return DropdownButtonFormField<String>(
-                        value:
+                        initialValue:
                             _selectedHubForCreate.isEmpty
                                 ? null
                                 : _selectedHubForCreate,
@@ -375,40 +378,11 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
                 return Column(
                   children:
                       list.map((g) {
-                        final groupId = g['id'] as String;
-                        final name = g['name'] as String? ?? 'Без имени';
+                        final groupId = (g['id'] ?? '').toString();
+                        final name = (g['name'] ?? 'Без имени').toString();
                         final members = (g['members'] as List?) ?? const [];
+
                         return _groupCard(context, groupId, name, members);
-                      }).toList(),
-                );
-              },
-              loading: () => _loadingCard(context),
-              error: (e, _) => _errorCard(context, e),
-            ),
-
-            const SizedBox(height: 24),
-
-            // === 3. Семейные хабы (агрегация по всем группам) ===
-            Text('Хабы семейного доступа', style: AppStyles.headline3(context)),
-            const SizedBox(height: 8),
-            familyHubsAsync.when(
-              data: (hubs) {
-                if (hubs.isEmpty) {
-                  return _emptyBox(context, 'Нет хабов семейного доступа');
-                }
-                return Column(
-                  children:
-                      hubs.map((h) {
-                        return Card(
-                          color: AppColors.getCardBackgroundColor(context),
-                          child: ListTile(
-                            title: Text(
-                              h.facilityName,
-                              style: AppStyles.bodyText1(context),
-                            ),
-                            subtitle: Text(h.commandHubId),
-                          ),
-                        );
                       }).toList(),
                 );
               },
@@ -429,6 +403,8 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
     String name,
     List members,
   ) {
+    final hubsAsync = ref.watch(fprov.familyHubsProvider(groupId));
+
     return Card(
       color: AppColors.getCardBackgroundColor(context),
       child: ExpansionTile(
@@ -507,9 +483,9 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
           ),
           const SizedBox(height: 8),
           ...members.map((m) {
-            final userId = m['id']?.toString() ?? '';
-            final uname = m['name']?.toString() ?? '—';
-            final role = m['role']?.toString() ?? 'USER';
+            final userId = (m['id'] ?? '').toString();
+            final uname = (m['name'] ?? '—').toString();
+            final role = (m['role'] ?? 'USER').toString();
             return Container(
               margin: const EdgeInsets.only(bottom: 6),
               decoration: AppStyles.cardDecoration(context),
@@ -546,36 +522,95 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
 
           const SizedBox(height: 12),
 
-          // Передача владения
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _transferUserIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'UserId нового владельца',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed:
-                    _busy
-                        ? null
-                        : () =>
-                            _transferOwner(groupId, _transferUserIdCtrl.text),
-                child: const Text('Передать'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
           // Управление хабами группы (attach/detach/arm/disarm)
           Align(
             alignment: Alignment.centerLeft,
             child: Text('Хабы группы', style: AppStyles.bodyText1(context)),
           ),
           const SizedBox(height: 8),
+
+          // Список хабов (по провайдеру familyHubsProvider(groupId))
+          hubsAsync.when(
+            loading:
+                () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: LinearProgressIndicator(),
+                ),
+            error:
+                (e, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Ошибка загрузки хабов: $e',
+                    style: AppStyles.bodyText2(
+                      context,
+                    ).copyWith(color: Colors.red),
+                  ),
+                ),
+            data: (hubs) {
+              if (hubs.isEmpty) {
+                return _emptyBox(context, 'Хабов нет');
+              }
+              return Column(
+                children:
+                    hubs.map<Widget>((h) {
+                      final hid = (h['id'] ?? h['hubId'] ?? '').toString();
+                      final hname =
+                          (h['facilityName'] ?? h['name'] ?? 'Без имени')
+                              .toString();
+                      final isConnected = (h['isConnected'] ?? false) == true;
+                      final isOnMon = (h['isOnMonitoring'] ?? false) == true;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: AppStyles.cardDecoration(context),
+                        child: ListTile(
+                          title: Text(
+                            hname,
+                            style: AppStyles.bodyText1(context),
+                          ),
+                          subtitle: Text(
+                            'id: $hid • conn: ${isConnected ? "online" : "offline"} • mon: ${isOnMon ? "on" : "off"}',
+                            style: AppStyles.bodyText2(context),
+                          ),
+                          trailing: Wrap(
+                            spacing: 8,
+                            children: [
+                              IconButton(
+                                tooltip: 'ARM',
+                                icon: const Icon(Icons.security_rounded),
+                                onPressed:
+                                    _busy
+                                        ? null
+                                        : () => _armSecurity(groupId, hid),
+                              ),
+                              IconButton(
+                                tooltip: 'DISARM',
+                                icon: const Icon(Icons.lock_open_rounded),
+                                onPressed:
+                                    _busy
+                                        ? null
+                                        : () => _disarmSecurity(groupId, hid),
+                              ),
+                              IconButton(
+                                tooltip: 'Detach',
+                                icon: const Icon(Icons.link_off_rounded),
+                                onPressed:
+                                    _busy
+                                        ? null
+                                        : () => _detachHub(groupId, hid),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+              );
+            },
+          ),
+
+          const SizedBox(height: 8),
+
+          // Быстрые действия по введённому hubId
           Row(
             children: [
               Expanded(
@@ -603,10 +638,9 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          // Быстрые действия (arm/disarm) по введённому hubId
           Row(
             children: [
-              Expanded(child: Container()),
+              const Spacer(),
               ElevatedButton.icon(
                 icon: const Icon(Icons.security_rounded),
                 onPressed:
@@ -623,6 +657,31 @@ class _FamilyAccessScreenState extends ConsumerState<FamilyAccessScreen> {
                         ? null
                         : () => _disarmSecurity(groupId, _attachHubIdCtrl.text),
                 label: const Text('DISARM'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Передача владения
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _transferUserIdCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'UserId нового владельца',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed:
+                    _busy
+                        ? null
+                        : () =>
+                            _transferOwner(groupId, _transferUserIdCtrl.text),
+                child: const Text('Передать'),
               ),
             ],
           ),

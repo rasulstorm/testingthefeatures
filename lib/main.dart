@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,11 +11,11 @@ import 'package:ISS/main_screen.dart';
 import 'package:ISS/initial_loading_screen.dart';
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
+import 'package:ISS/features/voice/voice_control_screen.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/features/family/group_list_screen.dart';
 import 'package:ISS/features/family/group_create_screen.dart';
 import 'package:ISS/features/family/group_manage_screen.dart';
-import 'package:ISS/features/family/family_access_screen.dart';
 import 'package:ISS/core/network/auth_service.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/services/local_auth_service.dart';
@@ -42,6 +40,7 @@ import 'package:ISS/features/wifi_setup/wifi_setup_screen.dart';
 import 'package:ISS/features/rooms/add_edit_room_screen.dart';
 import 'package:ISS/features/rooms/assign_devices_screen.dart';
 import 'package:ISS/models/space_model.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -102,6 +101,11 @@ class LocaleNotifier extends StateNotifier<Locale> {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("dotenv: .env not found, running with defaults. $e");
+  }
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   await initializeDateFormatting('ru_RU');
 
@@ -294,8 +298,10 @@ final GoRouter _router = GoRouter(
       path: '/notifications',
       builder: (context, state) => NotificationsScreen(),
     ),
-
-    // Регистрация и восстановление
+    GoRoute(
+      path: '/voice-control',
+      builder: (context, state) => const VoiceControlScreen(),
+    ),
     GoRoute(path: '/register', builder: (context, state) => RegisterScreen()),
     GoRoute(
       path: '/change-password',

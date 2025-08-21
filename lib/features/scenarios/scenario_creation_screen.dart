@@ -282,7 +282,7 @@ class _ScenarioCreationScreenState
                   ),
                   const SizedBox(height: 20),
                   DropdownButtonFormField<HubObject>(
-                    value: _selectedHub,
+                    initialValue: _selectedHub,
                     decoration: _commonInputDecoration(
                       labelText: localizations.selectHubLabel,
                       context: context,
@@ -404,7 +404,7 @@ class _ScenarioCreationScreenState
               () => setState(() => _triggers.removeAt(index)),
             ),
             DropdownButtonFormField<String>(
-              value: trigger.deviceName.isEmpty ? null : trigger.deviceName,
+              initialValue: trigger.deviceName.isEmpty ? null : trigger.deviceName,
               hint: Text(localizations.selectDevice),
               decoration: _commonInputDecoration(
                 labelText: localizations.deviceNameLabel,
@@ -484,7 +484,7 @@ class _ScenarioCreationScreenState
             ),
             DropdownButtonFormField<String>(
               // --- ИЗМЕНЕНО ---
-              value: condition.deviceName.isEmpty ? null : condition.deviceName,
+              initialValue: condition.deviceName.isEmpty ? null : condition.deviceName,
               hint: Text(localizations.selectDevice),
               decoration: _commonInputDecoration(
                 labelText: localizations.deviceNameLabel,
@@ -563,7 +563,7 @@ class _ScenarioCreationScreenState
               () => setState(() => _actions.removeAt(index)),
             ),
             DropdownButtonFormField<String>(
-              value: action.deviceName.isEmpty ? null : action.deviceName,
+              initialValue: action.deviceName.isEmpty ? null : action.deviceName,
               hint: Text(localizations.selectDevice),
               decoration: _commonInputDecoration(
                 labelText: localizations.deviceNameLabel,
