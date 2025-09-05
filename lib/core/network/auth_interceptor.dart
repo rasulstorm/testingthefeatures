@@ -12,6 +12,8 @@ class AuthInterceptor extends Interceptor {
   final List<RequestOptions> _queuedRequests = [];
   final List<Completer<Response>> _completers = [];
 
+  static const _kRetry401Key = '__retried401';
+
   AuthInterceptor(this.dio, this._authService);
 
   @override
@@ -24,7 +26,6 @@ class AuthInterceptor extends Interceptor {
     }
 
     final token = await _authService.getAccessToken();
-
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
@@ -37,34 +38,39 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    // Проверяем, является ли ошибка 401 Unauthorized и не является ли это запросом на refresh
-    if (err.response?.statusCode == 401 &&
-        !err.requestOptions.path.contains('/account-management/refresh')) {
-      // Если токен истек и мы уже не обновляем
+    final is401 = err.response?.statusCode == 401;
+    final isRefreshCall = err.requestOptions.path.contains(
+      '/account-management/refresh',
+    );
+
+    if (is401 && !isRefreshCall) {
+      // prevent per-request infinite loops
+      if (err.requestOptions.extra[_kRetry401Key] == true) {
+        _clearQueueAndRedirect(err, handler);
+        return;
+      }
+
+      // If not currently refreshing, start it
       if (!_isRefreshing) {
         _isRefreshing = true;
         String? newToken;
         try {
-          newToken =
-              await _authService.refreshAccessToken(); // Попытка обновить токен
-        } catch (e) {
-          // Если refresh не удался (например, refresh token тоже истек)
+          newToken = await _authService.refreshAccessToken();
+        } catch (_) {
           _isRefreshing = false;
-          _clearQueueAndRedirect(
-            err,
-            handler,
-          ); // Очищаем очередь и перенаправляем
-          return; // Выходим
+          _clearQueueAndRedirect(err, handler);
+          return;
         }
 
-        if (newToken != null) {
-          // Если новый токен получен успешно, выполняем все запросы из очереди
+        if (newToken != null && newToken.isNotEmpty) {
+          // drain queued
           for (int i = 0; i < _queuedRequests.length; i++) {
-            final requestOptions = _queuedRequests[i];
+            final req = _queuedRequests[i];
             final completer = _completers[i];
-            requestOptions.headers['Authorization'] = 'Bearer $newToken';
             try {
-              final response = await dio.fetch(requestOptions);
+              req.headers['Authorization'] = 'Bearer $newToken';
+              req.extra[_kRetry401Key] = true; // mark
+              final response = await dio.fetch(req);
               completer.complete(response);
             } on DioException catch (e) {
               completer.completeError(e);
@@ -73,68 +79,71 @@ class AuthInterceptor extends Interceptor {
           _queuedRequests.clear();
           _completers.clear();
 
-          // Повторяем изначальный запрос, который вызвал 401
-          final originalRequestOptions = err.requestOptions;
-          originalRequestOptions.headers['Authorization'] = 'Bearer $newToken';
+          // retry the original
+          final original = err.requestOptions;
+          original.headers['Authorization'] = 'Bearer $newToken';
+          original.extra[_kRetry401Key] = true;
           try {
-            final response = await dio.fetch(originalRequestOptions);
-            _isRefreshing = false; // Сбрасываем флаг после успешного повтора
+            final response = await dio.fetch(original);
+            _isRefreshing = false;
             return handler.resolve(response);
           } on DioException catch (e) {
-            _isRefreshing = false; // Сбрасываем флаг
-            _clearQueueAndRedirect(
-              e,
-              handler,
-            ); // Если повторный запрос также провалился
+            _isRefreshing = false;
+            _clearQueueAndRedirect(e, handler);
             return;
           }
         } else {
-          // Если newToken null (не удалось обновить токен, но исключения не было)
-          _clearQueueAndRedirect(
-            err,
-            handler,
-          ); // Очищаем очередь и перенаправляем
+          _isRefreshing = false;
+          _clearQueueAndRedirect(err, handler);
           return;
         }
       } else {
-        // Если токен истек, но уже идет процесс обновления, ставим запрос в очередь
-        final completer = Completer<Response>();
-        _queuedRequests.add(err.requestOptions);
-        _completers.add(completer);
-
-        try {
-          final result = await completer.future;
-          return handler.resolve(result);
-        } on DioException catch (e) {
-          return handler.reject(
-            e,
-          ); // Отклоняем запрос, если он провалился из очереди
+        // already refreshing: queue if replayable
+        if (_isReplayable(err.requestOptions)) {
+          final completer = Completer<Response>();
+          _queuedRequests.add(err.requestOptions);
+          _completers.add(completer);
+          try {
+            final result = await completer.future;
+            return handler.resolve(result);
+          } on DioException catch (e) {
+            return handler.reject(e);
+          }
+        } else {
+          // not safely replayable — fail fast so UI can react
+          _clearQueueAndRedirect(err, handler);
+          return;
         }
       }
     }
 
-    // Для всех остальных ошибок
+    // otherwise pass through
     return handler.next(err);
   }
 
-  // Вспомогательный метод для очистки очереди и перенаправления на логин
   void _clearQueueAndRedirect(
     DioException err,
     ErrorInterceptorHandler handler,
   ) {
     for (final completer in _completers) {
       if (!completer.isCompleted) {
-        completer.completeError(err); // Завершаем ожидающие запросы с ошибкой
+        completer.completeError(err);
       }
     }
     _queuedRequests.clear();
     _completers.clear();
-    _isRefreshing = false; // Убедимся, что флаг сброшен
+    _isRefreshing = false;
 
-    // Перенаправляем на экран логина
+    // Navigation: consider pushing this via a callback instead of here.
     if (navigatorKey.currentContext != null) {
       GoRouter.of(navigatorKey.currentContext!).go('/login');
     }
-    handler.reject(err); // Отклоняем оригинальный запрос
+    handler.reject(err);
+  }
+
+  bool _isReplayable(RequestOptions req) {
+    // Avoid retrying when there's a stream body (e.g., file upload)
+    final hasStreamBody = req.data is Stream;
+    return !hasStreamBody;
   }
 }

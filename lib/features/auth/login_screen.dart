@@ -101,7 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final response = await dio.post(
-        'https://app.iss-control.kz:443/api/v1/account-management/login',
+        'https://stage-app.iss-control.kz:443/api/v1/account-management/login',
         data: {"username": email, "password": password},
       );
       await _handleLoginResponse(response, email, password);
@@ -191,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _restoreAccountAndLogin(String email, String password) async {
     try {
       final restoreResponse = await dio.post(
-        'https://app.iss-control.kz:443/api/v1/user/restore',
+        'https://stage-app.iss-control.kz:443/api/v1/user/restore',
         data: {"username": email, "password": password},
       );
 
@@ -208,7 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (restoreCode == 0) {
         _showSnackbar('Аккаунт успешно восстановлен. Повторный вход...');
         final reLoginResponse = await dio.post(
-          'https://app.iss-control.kz:443/api/v1/account-management/login',
+          'https://stage-app.iss-control.kz:443/api/v1/account-management/login',
           data: {"username": email, "password": password},
         );
         await _handleLoginResponse(reLoginResponse, email, password);

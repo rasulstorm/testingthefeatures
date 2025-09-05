@@ -1,13 +1,19 @@
+// lib/features/home/home_screen.dart
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/core/network/dio_provider.dart';
+
 import 'package:ISS/features/voice/voice_mic_button.dart';
 import 'package:ISS/features/security_control/ws_provider.dart';
+
 import 'package:ISS/widgets/status_indicator_card.dart';
 import 'package:ISS/widgets/quick_action_button.dart';
 import 'package:ISS/widgets/control_device_card.dart';
@@ -19,10 +25,10 @@ import 'package:ISS/utils/device_utils.dart';
 
 import 'package:ISS/providers/selected_hub_provider.dart';
 import 'package:ISS/services/hub_service.dart';
-import 'package:ISS/features/family/group_list_screen.dart';
-import 'package:ISS/features/family/group_manage_screen.dart';
 import 'package:ISS/providers/hubs_provider.dart' as hubsr;
-import 'package:ISS/providers/family_group_providers.dart' as fg;
+
+// Фото хаба
+import 'package:ISS/features/hub_photo/hub_photo_controller.dart';
 
 enum PinType { disarm, duress }
 
@@ -40,13 +46,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Если hubId уже сохранён — подключаемся сразу.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(webSocketNotifierProvider.notifier).connect();
+      final savedHubId = ref.read(selectedHubIdProvider);
+      if (savedHubId != null && savedHubId.isNotEmpty) {
+        ref.read(webSocketNotifierProvider.notifier).connect(savedHubId);
+      }
     });
   }
 
-  // ==== helpers ====
+  @override
+  void dispose() {
+    ref.read(webSocketNotifierProvider.notifier).disconnect();
+    super.dispose();
+  }
 
   bool _effectiveArmed(String hubId, bool backendValue) =>
       _armedOverrideByHubId[hubId] ?? backendValue;
@@ -65,7 +79,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Map<String, dynamic>? _findLiveFor(
     BaseDevice device,
     Map<String, Map<String, dynamic>> liveMap,
-  ) => liveMap[device.id] ?? liveMap[device.friendlyName];
+  ) {
+    final byId = liveMap[device.id];
+    if (byId != null) return byId;
+    final fn = (device.friendlyName ?? '').trim();
+    if (fn.isEmpty) return null;
+    return liveMap[fn];
+  }
 
   BaseDevice _mergeLive(
     BaseDevice device,
@@ -76,31 +96,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return DeviceParser.parse({...device.rawData, ...live});
   }
 
-  void _onHubChanged(HubObject newHub) {
-    if (!mounted) return;
-    setState(() => _selectedHub = newHub);
-    ref.read(selectedHubIdProvider.notifier).state = newHub.commandHubId;
-
+  void _shareHubDevicesOverWs(HubObject hub) {
     final ws = ref.read(webSocketNotifierProvider.notifier);
     final sent = <String>{};
-    for (final d in newHub.devices) {
+    for (final d in hub.devices) {
       if (d.id.isNotEmpty && sent.add(d.id)) {
-        ws.sendShareDeviceData(newHub.commandHubId, d.id);
+        ws.sendShareDeviceData(hub.commandHubId, d.id);
       }
-      final fn = d.friendlyName.trim();
+      final fn = (d.friendlyName ?? '').trim();
       if (fn.isNotEmpty && sent.add(fn)) {
-        ws.sendShareDeviceData(newHub.commandHubId, fn);
+        ws.sendShareDeviceData(hub.commandHubId, fn);
       }
     }
   }
 
-  Future<void> _refreshHubsEverywhere() async {
-    final gid = ref.read(fg.activeFamilyGroupIdProvider);
-    await Future.wait([
-      ref.refresh(hubsr.hubsProvider.future),
-      ref.refresh(hubsr.homeHubsProvider.future),
-      if (gid != null) ref.refresh(fg.familyHubsProvider(gid).future),
-    ]);
+  void _onHubChanged(HubObject newHub) {
+    if (!mounted) return;
+    setState(() => _selectedHub = newHub);
+
+    // Сохраняем выбранный hubId (commandHubId) как и раньше:
+    ref.read(selectedHubIdProvider.notifier).state = newHub.commandHubId;
+
+    // Пере-подключаем WS под нужный hubId:
+    final ws = ref.read(webSocketNotifierProvider.notifier);
+    ws.disconnect();
+    ws.connect(newHub.commandHubId);
+
+    // Отправляем SHARE подписки
+    _shareHubDevicesOverWs(newHub);
+
+    // Загружаем фото по UUID (hub.id)
+    ref.read(hubPhotoControllerProvider.notifier).loadForHub(newHub.id);
+  }
+
+  Future<void> _refreshHubs() async {
+    await ref.refresh(hubsr.hubsProvider.future);
+    final hub = _selectedHub;
+    if (hub != null) {
+      await ref.read(hubPhotoControllerProvider.notifier).loadForHub(hub.id);
+    }
   }
 
   Future<void> _armSecurity(HubObject hub) async {
@@ -112,7 +146,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     try {
       await dio.post('/hub/${hub.commandHubId}/arm-security');
       _showSuccessSnackBar(loc.securityArmed);
-      await _refreshHubsEverywhere();
+      await _refreshHubs();
       _setArmedOverride(hub.commandHubId, null);
     } catch (e) {
       _setArmedOverride(hub.commandHubId, false);
@@ -134,7 +168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         data: {'pin': pin},
       );
       _showSuccessSnackBar(loc.securityDisarmed);
-      await _refreshHubsEverywhere();
+      await _refreshHubs();
       _setArmedOverride(hub.commandHubId, null);
     } catch (e) {
       _setArmedOverride(hub.commandHubId, true);
@@ -214,11 +248,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       _showSuccessSnackBar(loc.hubDetachedSuccess);
-      await _refreshHubsEverywhere();
+      await _refreshHubs();
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       _showErrorSnackBar(loc.hubDetachedFailed, e);
+    }
+  }
+
+  // ==== photo upload ====
+
+  Future<void> _pickAndUploadHubPhoto(HubObject hub) async {
+    final picker = ImagePicker();
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: AppColors.getCardBackgroundColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (_) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.getSecondaryTextColor(context),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Камера'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Галерея'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+    );
+
+    if (!mounted || source == null) return;
+
+    try {
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+      final file = File(picked.path);
+
+      final ok = await ref
+          .read(hubPhotoControllerProvider.notifier)
+          .uploadForHub(
+            hubUuid: hub.id, // здесь hub.id (UUID)
+            file: file,
+            type: 'ROOM',
+            name: 'Главная обложка',
+          );
+      if (ok) {
+        _showSuccessSnackBar('Фото обновлено');
+      } else {
+        _showErrorSnackBar('Не удалось загрузить фото');
+      }
+    } on PlatformException catch (e) {
+      _showErrorSnackBar('Нет разрешения на камеру/файлы: ${e.message}');
+    } catch (e) {
+      _showErrorSnackBar('Ошибка выбора фото: $e');
     }
   }
 
@@ -308,7 +416,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Navigator.pop(dCtx);
                   if (success) {
                     _showSuccessSnackBar(loc.hubRenamedSuccess);
-                    await _refreshHubsEverywhere();
+                    await _refreshHubs();
                   } else {
                     _showErrorSnackBar(loc.hubRenamedFailed);
                   }
@@ -709,49 +817,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final webSocketState = ref.watch(webSocketNotifierProvider);
     final webSocketConnected = webSocketState.isConnected;
 
-    final groupId = ref.watch(fg.activeFamilyGroupIdProvider);
-    final role = ref.watch(fg.activeFamilyRoleProvider) ?? fg.FamilyRole.user;
-    final allowUserDisarm = ref.watch(fg.allowUserDisarmProvider);
-    final isFamilyMode = groupId != null;
-
-    // источники хабов
-    final AsyncValue<List<HubObject>> hubsAsyncValue =
-        isFamilyMode
-            ? ref
-                .watch(fg.familyHubsProvider(groupId))
-                .whenData(
-                  (list) =>
-                      list
-                          .map(
-                            (e) =>
-                                HubObject.fromJson(e as Map<String, dynamic>),
-                          )
-                          .toList(),
-                )
-            : ref.watch(hubsr.homeHubsProvider);
-    // права
-    final canControl = fg.FamilyPermissions.canControlDevices(role);
-    final canArm = fg.FamilyPermissions.canArm(role);
-    final canDisarm = fg.FamilyPermissions.canDisarm(
-      role,
-      allowUser: allowUserDisarm,
+    final AsyncValue<List<HubObject>> hubsAsyncValue = ref.watch(
+      hubsr.hubsProvider,
     );
-    final canPins = fg.FamilyPermissions.canManagePins(role);
-    final canDetach =
-        !isFamilyMode || fg.FamilyPermissions.canAttachDetachHubs(role);
+
+    final hubPhotoState = ref.watch(hubPhotoControllerProvider);
 
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),
       body: hubsAsyncValue.when(
         data: (hubs) {
-          // EMPTY STATE
           if (hubs.isEmpty) {
             return RefreshIndicator(
-              onRefresh:
-                  () =>
-                      isFamilyMode
-                          ? ref.refresh(fg.familyHubsProvider(groupId).future)
-                          : ref.refresh(hubsr.homeHubsProvider.future),
+              onRefresh: _refreshHubs,
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
@@ -769,47 +847,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Вы можете подключить хаб или настроить семейный доступ.',
+                    'Подключите ваш хаб, чтобы управлять устройствами.',
                     textAlign: TextAlign.center,
                     style: AppStyles.bodyText2(context),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            // Переход в список/создание семейных групп
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const GroupListScreen(),
-                              ),
-                            );
-                            ref.invalidate(fg.familyGroupsProvider);
-                            await _refreshHubsEverywhere();
-                          },
-                          icon: const Icon(Icons.groups),
-                          label: const Text('Семейный доступ'),
-                        ),
-                      ),
-                      // Если хочешь кнопку подключения Wi-Fi хаба — раскомментируй и добавь роут /wifi-setup
-                      // const SizedBox(width: 12),
-                      // Expanded(
-                      //   child: ElevatedButton.icon(
-                      //     onPressed: () => context.push('/wifi-setup'),
-                      //     icon: const Icon(Icons.settings_input_antenna),
-                      //     label: const Text('Подключить хаб'),
-                      //   ),
-                      // ),
-                    ],
                   ),
                 ],
               ),
             );
           }
 
-          // ensure selected
           if (_selectedHub == null ||
               !hubs.any((h) => h.commandHubId == _selectedHub!.commandHubId)) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -831,20 +877,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               currentHub.devices
                   .map((d) => _mergeLive(d, liveDataMap))
                   .toList();
+
           final statusIndicators = DeviceUtils.createStatusIndicators(
             updatedDevices,
             loc,
             context,
           );
-          final controllableDevices =
-              canControl
-                  ? DeviceUtils.getControllableDevices(updatedDevices)
-                  : <BaseDevice>[];
+
+          final controllableDevices = DeviceUtils.getControllableDevices(
+            updatedDevices,
+          );
 
           final isArmed = _effectiveArmed(
             currentHub.commandHubId,
             currentHub.onMonitoring,
           );
+
           final buttonText = isArmed ? loc.disarm : loc.arm;
           final buttonIcon =
               isArmed ? Icons.lock_open_rounded : Icons.security_rounded;
@@ -855,12 +903,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           final buttonFg =
               isArmed ? AppColors.primaryAccent : AppColors.textColorDark;
 
+          final backgroundUrl = hubPhotoState.url; // уже с cache-bust
+
           return RefreshIndicator(
-            onRefresh:
-                () =>
-                    isFamilyMode
-                        ? ref.refresh(fg.familyHubsProvider(groupId).future)
-                        : ref.refresh(hubsr.homeHubsProvider.future),
+            onRefresh: _refreshHubs,
             color: AppColors.primaryAccent,
             backgroundColor: AppColors.getCardBackgroundColor(context),
             child: CustomScrollView(
@@ -871,90 +917,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   floating: false,
                   pinned: true,
                   actions: [
-                    if (canPins)
-                      IconButton(
-                        icon: const Icon(Icons.admin_panel_settings_outlined),
-                        tooltip: 'PIN-коды',
-                        onPressed: () => _openPinManagementSheet(currentHub),
-                      ),
-                    if (canDetach)
-                      IconButton(
-                        icon: const Icon(Icons.link_off),
-                        tooltip: loc.detachHub,
-                        onPressed:
-                            () => _showDetachConfirmationDialog(
-                              context,
-                              currentHub,
-                            ),
-                      ),
                     IconButton(
-                      icon: const Icon(Icons.groups),
-                      tooltip:
-                          isFamilyMode
-                              ? 'Семейный доступ (вкл.)'
-                              : 'Семейный доступ',
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const GroupListScreen(),
-                          ),
-                        );
-                        ref.invalidate(fg.familyGroupsProvider);
-                        await _refreshHubsEverywhere();
-                      },
+                      icon: const Icon(Icons.camera_alt_outlined),
+                      tooltip: 'Обложка дома',
+                      onPressed: () => _pickAndUploadHubPhoto(currentHub),
                     ),
-                    if (isFamilyMode)
-                      IconButton(
-                        icon: const Icon(Icons.manage_accounts),
-                        tooltip: 'Управление группой',
-                        onPressed: () async {
-                          final gid = groupId;
-
-                          // найдём имя группы
-                          String groupName = 'Группа';
-                          try {
-                            final groups = await ref.read(
-                              fg.familyGroupsProvider.future,
-                            );
-                            final g = groups
-                                .cast<Map<String, dynamic>>()
-                                .firstWhere(
-                                  (e) => e['id'] == gid,
-                                  orElse: () => const {'name': 'Группа'},
-                                );
-                            if (g['name'] is String &&
-                                (g['name'] as String).isNotEmpty) {
-                              groupName = g['name'] as String;
-                            }
-                          } catch (_) {}
-
-                          await Navigator.push(
+                    IconButton(
+                      icon: const Icon(Icons.admin_panel_settings_outlined),
+                      tooltip: 'PIN-коды',
+                      onPressed: () => _openPinManagementSheet(currentHub),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.link_off),
+                      tooltip: loc.detachHub,
+                      onPressed:
+                          () => _showDetachConfirmationDialog(
                             context,
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => GroupManageScreen(
-                                    groupId: gid,
-                                    name: groupName,
-                                  ),
-                            ),
-                          );
-                        },
-                      ),
+                            currentHub,
+                          ),
+                    ),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
                     collapseMode: CollapseMode.parallax,
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.asset(
-                          'assets/images/home_background.jpg',
-                          fit: BoxFit.cover,
-                          errorBuilder:
-                              (_, __, ___) => Container(
-                                color: AppColors.getBackgroundColor(context),
-                              ),
-                        ),
+                        if (backgroundUrl != null)
+                          Image.network(
+                            backgroundUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  color: AppColors.getBackgroundColor(context),
+                                ),
+                          )
+                        else
+                          Image.asset(
+                            'assets/images/home_background.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  color: AppColors.getBackgroundColor(context),
+                                ),
+                          ),
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -967,6 +972,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                         ),
+                        if (hubPhotoState.loading)
+                          Container(
+                            color: Colors.black26,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
                       ],
                     ),
                     titlePadding: const EdgeInsets.only(
@@ -1007,43 +1019,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                webSocketConnected
+                                    ? Icons.wifi
+                                    : Icons.wifi_off,
+                                size: 14,
+                                color:
                                     webSocketConnected
-                                        ? Icons.wifi
-                                        : Icons.wifi_off,
-                                    size: 14,
-                                    color:
-                                        webSocketConnected
-                                            ? Colors.lightGreenAccent
-                                            : Colors.redAccent,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    isFamilyMode
-                                        ? 'Семейный режим • ${role.name.toUpperCase()}'
-                                        : loc.status,
-                                    style: AppStyles.caption(context).copyWith(
-                                      fontSize: 11,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
+                                        ? Colors.lightGreenAccent
+                                        : Colors.redAccent,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Text(
+                                loc.status,
+                                style: AppStyles.caption(
+                                  context,
+                                ).copyWith(fontSize: 11, color: Colors.white),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -1056,56 +1062,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   sliver: SliverToBoxAdapter(
                     child: Row(
                       children: [
-                        if (canArm || (isArmed && canDisarm))
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed:
-                                  _isSecurityActionLoading
-                                      ? null
-                                      : () {
-                                        if (isArmed) {
-                                          if (!canDisarm) return;
-                                          _openSecuritySheet(currentHub);
-                                        } else {
-                                          if (!canArm) return;
-                                          _armSecurity(currentHub);
-                                        }
-                                      },
-                              icon:
-                                  _isSecurityActionLoading
-                                      ? SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: buttonFg,
-                                        ),
-                                      )
-                                      : Icon(buttonIcon, color: buttonFg),
-                              label: Text(
-                                buttonText,
-                                style: AppStyles.bodyText1(
-                                  context,
-                                ).copyWith(color: buttonFg),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: buttonBg,
-                                disabledBackgroundColor: buttonBg.withOpacity(
-                                  0.5,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppStyles.borderRadiusAll(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                  horizontal: 16,
-                                ),
-                                elevation: 4,
-                              ),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                _isSecurityActionLoading
+                                    ? null
+                                    : () {
+                                      if (isArmed) {
+                                        _openSecuritySheet(currentHub);
+                                      } else {
+                                        _armSecurity(currentHub);
+                                      }
+                                    },
+                            icon:
+                                _isSecurityActionLoading
+                                    ? SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: buttonFg,
+                                      ),
+                                    )
+                                    : Icon(buttonIcon, color: buttonFg),
+                            label: Text(
+                              buttonText,
+                              style: AppStyles.bodyText1(
+                                context,
+                              ).copyWith(color: buttonFg),
                             ),
-                          )
-                        else
-                          const SizedBox.shrink(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: buttonBg,
+                              disabledBackgroundColor: buttonBg.withOpacity(
+                                0.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppStyles.borderRadiusAll(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
+                              elevation: 4,
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         _buildIconButton(
                           context,
@@ -1167,87 +1168,85 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
 
                 // ======= QUICK ACTIONS =======
-                if (canControl) ...[
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                    sliver: SliverToBoxAdapter(
-                      child: Text(
-                        loc.quickActions,
-                        style: AppStyles.headline3(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.bold),
-                      ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Text(
+                      loc.quickActions,
+                      style: AppStyles.headline3(
+                        context,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverToBoxAdapter(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: QuickActionButton(
-                              label: loc.switchAll,
-                              icon: Icons.power,
-                              onTap: () {
-                                final controllable =
-                                    DeviceUtils.getControllableDevices(
-                                      updatedDevices,
-                                    );
-                                final ws = ref.read(
-                                  webSocketNotifierProvider.notifier,
-                                );
-                                final sent = <String>{};
-                                for (final d in controllable) {
-                                  if (sent.add(d.id)) {
-                                    ws.sendDeviceCommand(
-                                      currentHub.commandHubId,
-                                      d.id,
-                                      {"state": "ON"},
-                                    );
-                                    ws.updateDeviceLocalState(d.id, {
-                                      'state': 'ON',
-                                    });
-                                  }
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: QuickActionButton(
+                            label: loc.switchAll,
+                            icon: Icons.power,
+                            onTap: () {
+                              final controllable =
+                                  DeviceUtils.getControllableDevices(
+                                    updatedDevices,
+                                  );
+                              final ws = ref.read(
+                                webSocketNotifierProvider.notifier,
+                              );
+                              final sent = <String>{};
+                              for (final d in controllable) {
+                                if (sent.add(d.id)) {
+                                  ws.sendDeviceCommand(
+                                    currentHub.commandHubId,
+                                    d.id,
+                                    {"state": "ON"},
+                                  );
+                                  ws.updateDeviceLocalState(d.id, {
+                                    'state': 'ON',
+                                  });
                                 }
-                                _showSuccessSnackBar(loc.switchAllSuccess);
-                              },
-                            ),
+                              }
+                              _showSuccessSnackBar(loc.switchAllSuccess);
+                            },
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: QuickActionButton(
-                              label: loc.powerOffAll,
-                              icon: Icons.power_off,
-                              onTap: () {
-                                final controllable =
-                                    DeviceUtils.getControllableDevices(
-                                      updatedDevices,
-                                    );
-                                final ws = ref.read(
-                                  webSocketNotifierProvider.notifier,
-                                );
-                                final sent = <String>{};
-                                for (final d in controllable) {
-                                  if (sent.add(d.id)) {
-                                    ws.sendDeviceCommand(
-                                      currentHub.commandHubId,
-                                      d.id,
-                                      {"state": "OFF"},
-                                    );
-                                    ws.updateDeviceLocalState(d.id, {
-                                      'state': 'OFF',
-                                    });
-                                  }
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: QuickActionButton(
+                            label: loc.powerOffAll,
+                            icon: Icons.power_off,
+                            onTap: () {
+                              final controllable =
+                                  DeviceUtils.getControllableDevices(
+                                    updatedDevices,
+                                  );
+                              final ws = ref.read(
+                                webSocketNotifierProvider.notifier,
+                              );
+                              final sent = <String>{};
+                              for (final d in controllable) {
+                                if (sent.add(d.id)) {
+                                  ws.sendDeviceCommand(
+                                    currentHub.commandHubId,
+                                    d.id,
+                                    {"state": "OFF"},
+                                  );
+                                  ws.updateDeviceLocalState(d.id, {
+                                    'state': 'OFF',
+                                  });
                                 }
-                                _showSuccessSnackBar(loc.powerOffAllSuccess);
-                              },
-                            ),
+                              }
+                              _showSuccessSnackBar(loc.powerOffAllSuccess);
+                            },
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
 
                 // ======= DEVICES =======
                 SliverPadding(

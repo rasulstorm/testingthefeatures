@@ -13,6 +13,9 @@ import 'package:ISS/services/firebase_messaging_service.dart';
 import 'package:ISS/services/picovoice_service.dart';
 import 'package:ISS/features/rooms/rooms_and_devices_screen.dart';
 
+// >>> добавь импорт экрана AI-чата
+import 'package:ISS/features/ai_chat/ai_chat_screen.dart';
+
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
@@ -48,9 +51,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.dispose();
   }
 
+  // >>> теперь 5 страниц: Home, Devices, AI, Scenarios, Settings
   static final List<Widget> _pages = <Widget>[
     const HomeScreen(),
     const RoomsAndDevicesScreen(),
+    //  const AiChatScreen(), // <<< новая вкладка
     const ScenariosScreen(),
     const SettingsScreen(),
   ];
@@ -78,9 +83,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
       }
     });
 
+    // >>> заголовки для AppBar по вкладкам (AI — без локализации)
     final List<String> pageTitles = <String>[
       localizations.homeTab,
       localizations.devicesTab,
+      //   'AI', // <<< новая вкладка
       localizations.scenariosTab,
       localizations.settingsTab,
     ];
@@ -139,6 +146,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ],
       ),
       body: IndexedStack(index: _selectedIndex, children: _pages),
+
+      // >>> нижняя навигация на 5 пунктов (AI с иконкой чат-бота)
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -151,6 +160,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
             activeIcon: const Icon(Icons.devices_other),
             label: localizations.devicesTab,
           ),
+          //    BottomNavigationBarItem(
+          //     icon: const Icon(Icons.smart_toy_outlined), // <<< AI
+          //    activeIcon: const Icon(Icons.smart_toy),
+          //  label: 'AI',
+          // ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.playlist_add_check_outlined),
             activeIcon: const Icon(Icons.playlist_add_check),

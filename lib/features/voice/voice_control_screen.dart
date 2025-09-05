@@ -117,7 +117,7 @@ class _VoiceControlScreenState extends ConsumerState<VoiceControlScreen> {
     setState(() => _busyAction = true);
     try {
       final res = await dio.post(
-        '/voice-assistant',
+        '/voice-assistant/command-classification',
         data: {'hubId': hubId, 'text': text},
       );
       _pushHistory(
@@ -187,7 +187,7 @@ class _VoiceControlScreenState extends ConsumerState<VoiceControlScreen> {
                     const SizedBox(height: 8),
                     DropdownButtonFormField<HubObject>(
                       isExpanded: true,
-                      value: _selectedHub,
+                      initialValue: _selectedHub,
                       items: items,
                       onChanged: (v) => setState(() => _selectedHub = v),
                       decoration: const InputDecoration(labelText: 'Hub'),

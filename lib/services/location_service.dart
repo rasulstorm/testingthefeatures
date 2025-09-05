@@ -8,8 +8,6 @@ import 'package:ISS/core/network/dio_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// ===== ПУБЛИЧНЫЙ HELPER ДЛЯ main.dart =====
-/// Если фон. трекинг включён в префах — конфигурируем background_fetch.
 Future<void> restoreBackgroundTrackingIfEnabled() async {
   final core = _LocationCore();
   final enabled = await core.isLocationTrackingEnabled();
@@ -18,7 +16,6 @@ Future<void> restoreBackgroundTrackingIfEnabled() async {
   }
 }
 
-/// ===== HEADLESS TASK ДЛЯ background_fetch =====
 @pragma('vm:entry-point')
 void backgroundFetchHeadlessTask(HeadlessTask task) async {
   final String taskId = task.taskId;
@@ -214,7 +211,6 @@ class _LocationCore {
       },
     );
     _bgConfigured = true;
-    // ignore: avoid_print
     print('▶️ Фоновое отслеживание геолокации запущено (configured).');
   }
 

@@ -2,13 +2,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// твои WS провайдеры
+// legacy WS (security_control/ws_provider.dart)
 import 'package:ISS/features/security_control/ws_provider.dart'
-    show webSocketNotifierProvider; // с sendDeviceCommand(deviceName)
-import 'package:ISS/services/websocket_service.dart'
-    show appWebSocketProvider; // с sendCommand(deviceId)
+    show webSocketNotifierProvider;
 
-/// Унифицированный интерфейс
+// app-wide WS (services/websocket_service.dart)
+import 'package:ISS/services/websocket_service.dart' show appWebSocketProvider;
+
 abstract class DeviceCommandSender {
   Future<void> setLight({
     required String hubId,
@@ -17,9 +17,6 @@ abstract class DeviceCommandSender {
   });
 }
 
-/// Реализация через твои два WS-слоя.
-/// Примечание по payload: оставил максимально простой и читаемый.
-/// Если бек ожидает другой формат — подправь здесь один раз.
 final deviceCommandSenderProvider = Provider<DeviceCommandSender>((ref) {
   return _WsDeviceCommandSender(ref);
 });
@@ -28,18 +25,17 @@ class _WsDeviceCommandSender implements DeviceCommandSender {
   final Ref ref;
   _WsDeviceCommandSender(this.ref);
 
-  Future<void> _ensureConnected() async {
-    // 1) новый простой канал (appWebSocketProvider)
-    final appWs = ref.read(appWebSocketProvider.notifier);
-    if (!ref.read(appWebSocketProvider)) {
-      await appWs.connect();
+  Future<void> _ensureConnected(String hubId) async {
+    // app WS (bool state = connected)
+    final appWsNotifier = ref.read(appWebSocketProvider.notifier);
+    final appWsConnected = ref.read(appWebSocketProvider);
+    if (!appWsConnected) {
+      await appWsNotifier.connect(hubId: hubId);
     }
 
-    // 2) «старый» notifier (webSocketNotifierProvider)
+    // legacy WS (connect(hubId) как позиционный)
     final legacyWs = ref.read(webSocketNotifierProvider.notifier);
-    // у него нет явного статуса в state? — но есть connect()
-    // вызовем безопасно: он сам проверит и ничего лишнего не сделает
-    await legacyWs.connect();
+    await legacyWs.connect(hubId);
   }
 
   @override
@@ -48,20 +44,11 @@ class _WsDeviceCommandSender implements DeviceCommandSender {
     required String deviceId,
     required bool on,
   }) async {
-    await _ensureConnected();
+    await _ensureConnected(hubId);
 
-    // Универсальный payload. Если у бекэнда другой контракт —
-    // меняешь тут в одном месте.
-    final payload = {
-      "type": "switch",
-      "on": on, // true/false
-      "value": on ? "ON" : "OFF",
-      // можно добавить "source": "voice" для трекинга
-    };
+    final payload = {"type": "switch", "on": on, "value": on ? "ON" : "OFF"};
 
-    // --- Пытаемся через оба канала ---
-
-    // А) appWebSocketProvider — требует deviceId
+    // Пытаемся через app WS
     try {
       ref
           .read(appWebSocketProvider.notifier)
@@ -73,15 +60,11 @@ class _WsDeviceCommandSender implements DeviceCommandSender {
       debugPrint('[Voice] appWS sendCommand error: $e');
     }
 
-    // Б) webSocketNotifierProvider — у него сигнатура с deviceIdentifier (часто «deviceName»)
+    // Дублируем через legacy WS (на всякий случай)
     try {
       ref
           .read(webSocketNotifierProvider.notifier)
-          .sendDeviceCommand(
-            hubId,
-            deviceId, // если у тебя тут реально нужен friendlyName — подставь его вместо deviceId
-            payload,
-          );
+          .sendDeviceCommand(hubId, deviceId, payload);
       debugPrint(
         '[Voice] sendDeviceCommand(legacyWS): hub=$hubId device=$deviceId $payload',
       );

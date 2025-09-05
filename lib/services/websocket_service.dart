@@ -1,110 +1,100 @@
+// lib/services/websocket_service.dart
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // для debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/io.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 
 final appWebSocketProvider = StateNotifierProvider<AppWebSocketNotifier, bool>(
   (ref) => AppWebSocketNotifier(ref),
 );
 
-// Этот провайдер будет предоставлять поток сырых WebSocket-сообщений
+// (опционально) общий поток входящих сообщений
 final webSocketMessagesProvider = StreamProvider<dynamic>((ref) {
   final notifier = ref.watch(appWebSocketProvider.notifier);
-  return notifier.messagesStream; // Выставляем поток
+  return notifier.messagesStream;
 });
 
 class AppWebSocketNotifier extends StateNotifier<bool> {
-  // Состояние теперь просто статус 'connected' (true/false)
   AppWebSocketNotifier(this._ref) : super(false);
 
   final Ref _ref;
   IOWebSocketChannel? _channel;
-  final StreamController<dynamic> _messageController =
-      StreamController.broadcast();
+  final _messageController = StreamController<dynamic>.broadcast();
   Timer? _reconnectTimer;
-  bool _shouldReconnect =
-      true; // Флаг для управления автоматическими переподключениями
+  bool _shouldReconnect = true;
+  String? _hubId;
 
   Stream<dynamic> get messagesStream => _messageController.stream;
 
-  Future<void> connect() async {
+  Future<void> connect({required String hubId}) async {
     if (state) {
-      // Если уже подключено (state = true)
-      debugPrint('[AppWebSocket] Уже подключено, пропускаем подключение.');
+      debugPrint('[AppWS] already connected, skip');
       return;
     }
+    if (hubId.isEmpty) {
+      debugPrint('[AppWS] hubId is empty — abort connect');
+      return;
+    }
+    _hubId = hubId;
 
-    // Получаем токен из SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-
     if (token == null || token.isEmpty) {
-      debugPrint(
-        '[AppWebSocket] Токен доступа не найден. Невозможно подключиться.',
-      );
+      debugPrint('[AppWS] accessToken not found');
       return;
     }
-
-    // Предполагаем, что ваш токен не требует префикса "Bearer " для WebSocket
-    if (token.startsWith('Bearer ')) {
-      token = token.substring(7); // Удаляем префикс "Bearer ", если он есть
-    }
+    if (token.startsWith('Bearer ')) token = token.substring(7);
 
     try {
-      final url = 'wss://app.iss-control.kz/ws?token=$token';
-      debugPrint('[AppWebSocket] Подключаемся к $url');
+      final uri = Uri(
+        scheme: 'wss',
+        host: 'stage-app.iss-control.kz',
+        path: '/ws',
+        queryParameters: {'token': token, 'hubId': _hubId!},
+      );
+      debugPrint('[AppWS] URI: $uri');
 
-      _channel = IOWebSocketChannel.connect(Uri.parse(url));
+      _channel = IOWebSocketChannel.connect(uri);
 
       _channel!.stream.listen(
         (message) {
-          debugPrint('[AppWebSocket] Получено сообщение: $message');
+          debugPrint('[AppWS] RX: $message');
           try {
-            _messageController.add(
-              jsonDecode(message),
-            ); // Добавляем сырые JSON-данные в поток
+            _messageController.add(jsonDecode(message));
           } catch (e) {
-            debugPrint(
-              '[AppWebSocket] Ошибка парсинга JSON: $e, сообщение: $message',
-            );
+            debugPrint('[AppWS] JSON parse error: $e; msg=$message');
           }
         },
         onDone: () {
-          state = false; // Обновляем статус подключения
-          debugPrint(
-            '[AppWebSocket] Соединение закрыто. _shouldReconnect: $_shouldReconnect',
-          );
+          state = false;
+          debugPrint('[AppWS] closed. reconnect=$_shouldReconnect');
           if (_shouldReconnect) {
             _scheduleReconnect();
           } else {
-            _messageController
-                .close(); // Закрываем поток, если не переподключаемся
-          }
-        },
-        onError: (error) {
-          state = false; // Обновляем статус подключения
-          debugPrint(
-            '[AppWebSocket] Произошла ошибка: $error. _shouldReconnect: $_shouldReconnect',
-          );
-          if (_shouldReconnect) {
-            _scheduleReconnect();
-          } else {
-            _messageController.addError(error); // Добавляем ошибку в поток
             _messageController.close();
           }
         },
+        onError: (error) {
+          state = false;
+          debugPrint('[AppWS] error: $error. reconnect=$_shouldReconnect');
+          if (_shouldReconnect) {
+            _scheduleReconnect();
+          } else {
+            _messageController.addError(error);
+            _messageController.close();
+          }
+        },
+        cancelOnError: true,
       );
 
-      state = true; // Обновляем статус подключения
-      debugPrint('[AppWebSocket] Соединение установлено.');
-      _reconnectTimer?.cancel(); // Отменяем любые ожидающие переподключения
+      state = true;
+      _reconnectTimer?.cancel();
+      debugPrint('[AppWS] connected');
     } catch (e) {
-      state = false; // Обновляем статус подключения
-      debugPrint(
-        '[AppWebSocket] Исключение при подключении: $e. Планируем переподключение...',
-      );
+      state = false;
+      debugPrint('[AppWS] connect exception: $e');
       if (_shouldReconnect) {
         _scheduleReconnect();
       } else {
@@ -117,24 +107,20 @@ class AppWebSocketNotifier extends StateNotifier<bool> {
   void _scheduleReconnect() {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(seconds: 5), () {
-      debugPrint('[AppWebSocket] Попытка переподключения...');
-      if (_shouldReconnect) {
-        // Переподключаемся только если флаг true
-        connect();
+      if (_shouldReconnect && _hubId != null && _hubId!.isNotEmpty) {
+        debugPrint('[AppWS] reconnecting…');
+        connect(hubId: _hubId!);
       }
     });
   }
 
-  // Метод для отправки команд (устройство-специфичные)
   void sendCommand(
     String hubId,
     String deviceId,
     Map<String, dynamic> payload,
   ) {
     if (!state || _channel == null) {
-      debugPrint(
-        '[AppWebSocket] Невозможно отправить команду, сокет не подключен.',
-      );
+      debugPrint('[AppWS] cannot send, socket not connected');
       return;
     }
     final command = {
@@ -142,17 +128,13 @@ class AppWebSocketNotifier extends StateNotifier<bool> {
       "hubId": hubId,
       "details": {"deviceId": deviceId, "payload": payload},
     };
-    final jsonCommand = jsonEncode(command);
-    debugPrint('[AppWebSocket] Отправка команды: $jsonCommand');
-    _channel!.sink.add(jsonCommand);
+    _channel!.sink.add(jsonEncode(command));
+    debugPrint('[AppWS] TX DEVICE_COMMAND: $command');
   }
 
-  // Метод для отправки команды SHARE_DEVICE_DATA
   void sendShareDeviceDataCommand(String hubId, String deviceId) {
     if (!state || _channel == null) {
-      debugPrint(
-        '[AppWebSocket] Невозможно отправить команду SHARE_DEVICE_DATA, сокет не подключен.',
-      );
+      debugPrint('[AppWS] cannot share, socket not connected');
       return;
     }
     final command = {
@@ -160,18 +142,23 @@ class AppWebSocketNotifier extends StateNotifier<bool> {
       "hubId": hubId,
       "details": {"deviceId": deviceId},
     };
-    final jsonCommand = jsonEncode(command);
-    debugPrint(
-      '[AppWebSocket] Отправка команды SHARE_DEVICE_DATA: $jsonCommand',
-    );
-    _channel!.sink.add(jsonCommand);
+    _channel!.sink.add(jsonEncode(command));
+    debugPrint('[AppWS] TX SHARE_DEVICE_DATA: $command');
+  }
+
+  void disconnect() {
+    debugPrint('[AppWS] manual disconnect');
+    _shouldReconnect = false;
+    _reconnectTimer?.cancel();
+    _channel?.sink.close();
+    _channel = null;
+    state = false;
   }
 
   @override
   void dispose() {
-    debugPrint('[AppWebSocket] Закрытие соединения...');
-    _shouldReconnect =
-        false; // Предотвращаем дальнейшие автоматические переподключения
+    debugPrint('[AppWS] dispose');
+    _shouldReconnect = false;
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _messageController.close();

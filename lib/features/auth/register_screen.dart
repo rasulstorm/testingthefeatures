@@ -77,7 +77,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     try {
       final response = await dio.post(
-        'https://app.iss-control.kz:443/api/v1/account-management/register/check-credentials',
+        'https://stage-app.iss-control.kz:443/api/v1/account-management/register/check-credentials',
         data: {
           "iin": _iinController.text,
           "phone": phone,

@@ -60,7 +60,7 @@ class RetryInterceptor extends Interceptor {
 }
 
 class DioConfig {
-  static const String baseUrl = 'https://app.iss-control.kz:443/api/v1';
+  static const String baseUrl = 'https://stage-app.iss-control.kz:443/api/v1';
 }
 
 final Dio dio = Dio(

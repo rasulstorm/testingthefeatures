@@ -526,7 +526,7 @@
   "voiceAssistantEnabled": "Звуковой ассистент работает",
   "voiceAssistantDisabled": "Voice Assistant Disabled",
   "voiceAssistantSetting": "Voice Assistant Settings",
-      "otpConfirmationTitle": "OTP Confirmation",
+    "otpConfirmationTitle": "OTP Confirmation",
     "otpSentTo": "Enter the code sent to",
     "otpSent": "OTP code has been sent",
     "otpSendError": "Error sending OTP code",

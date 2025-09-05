@@ -1,5 +1,3 @@
-// lib/features/rooms/rooms_service.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:ISS/core/network/dio_provider.dart';
@@ -15,7 +13,6 @@ class RoomsService {
     return fallback;
   }
 
-  /// СОЗДАНИЕ КОМНАТЫ (внутри УЖЕ существующего space)
   Future<void> createRoom(String spaceId, String name) async {
     try {
       await dio.post('/space/$spaceId/room', data: {'name': name});
@@ -24,7 +21,6 @@ class RoomsService {
     }
   }
 
-  /// ПЕРЕИМЕНОВАНИЕ КОМНАТЫ
   Future<void> updateRoomName(
     String spaceId,
     String roomId,
@@ -37,7 +33,6 @@ class RoomsService {
     }
   }
 
-  /// УДАЛЕНИЕ КОМНАТЫ ИЗ ПРОСТРАНСТВА
   Future<void> deleteRoom(String spaceId, String roomId) async {
     try {
       await dio.delete('/space/$spaceId/room/$roomId');
@@ -46,7 +41,6 @@ class RoomsService {
     }
   }
 
-  /// ПРИВЯЗКА ДЕВАЙСА К КОМНАТЕ
   Future<void> assignDeviceToRoom(String deviceId, String roomId) async {
     try {
       await dio.post('/device/$deviceId/assign-to-room/$roomId');
@@ -55,7 +49,6 @@ class RoomsService {
     }
   }
 
-  /// ПОЛУЧИТЬ ВСЕ ДЕВАЙСЫ ПО ROOM
   Future<List<Map<String, dynamic>>> getDevicesByRoom(String roomId) async {
     try {
       final res = await dio.get('/device/$roomId/find-by-room');
@@ -66,7 +59,6 @@ class RoomsService {
     }
   }
 
-  /// (опционально) ПОЛУЧИТЬ ВСЕ ДЕВАЙСЫ ПО SPACE
   Future<List<Map<String, dynamic>>> getDevicesBySpace(String spaceId) async {
     try {
       final res = await dio.get('/device/$spaceId/find-by-space');

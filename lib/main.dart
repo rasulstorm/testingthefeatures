@@ -41,6 +41,7 @@ import 'package:ISS/features/rooms/add_edit_room_screen.dart';
 import 'package:ISS/features/rooms/assign_devices_screen.dart';
 import 'package:ISS/models/space_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ISS/features/ai_chat/ai_chat_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -294,6 +295,7 @@ final GoRouter _router = GoRouter(
       path: '/about-us',
       builder: (context, state) => const AboutUsScreen(),
     ),
+    GoRoute(path: '/ai-chat', builder: (_, __) => const AiChatScreen()),
     GoRoute(
       path: '/notifications',
       builder: (context, state) => NotificationsScreen(),

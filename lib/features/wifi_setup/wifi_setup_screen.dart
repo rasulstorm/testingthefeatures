@@ -61,9 +61,6 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
       if (mounted) setState(() => _currentPhoneSsid = 'Error');
     }
   }
-
-  // УДАЛЕНО: Метод _pollHubStatus больше не нужен
-
   Future<void> _connectWifi() async {
     final localizations = AppLocalizations.of(context);
     setState(() {
@@ -78,12 +75,12 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
     final hubLocalDio = Dio(
       BaseOptions(
         baseUrl: 'http://192.168.4.1',
-        connectTimeout: const Duration(seconds: 15),
+        connectTimeout: const Duration(seconds: 45),
       ),
     );
 
     try {
-      // --- Шаг 1: Получение hubNumber С ХАБА ---
+     
       _appendDebugLog('STEP 1: Getting hubNumber from hub...');
       setState(() => _statusMessage = localizations.connectingToHub);
 
@@ -99,11 +96,9 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
         throw Exception(localizations.hubNumberNotFound);
       }
 
-      // --- Шаг 2: Отправка Wi-Fi учетных данных на хаб ---
       _appendDebugLog('STEP 2: Sending Wi-Fi credentials to hub...');
       setState(() => _statusMessage = localizations.sendingWifiCredentials);
 
-      // Отправляем запрос, но не ждем его завершения, так как хаб сразу разорвет соединение
       unawaited(
         hubLocalDio.post(
           '/api/v1/wifi_credentials',
@@ -118,10 +113,9 @@ class _WifiSetupScreenState extends ConsumerState<WifiSetupScreen> {
         'STEP 2 SUCCESS: Credentials sent. Hub will now reboot and connect to your Wi-Fi.',
       );
 
-      // --- Шаг 3: Ожидание ---
       _appendDebugLog('STEP 3: Waiting for hub to connect to the cloud...');
       setState(() => _statusMessage = localizations.waitingForHubConnection);
-      // Даем хабу достаточно времени на перезагрузку и подключение
+    
       await Future.delayed(const Duration(seconds: 20));
 
       _appendDebugLog('STEP 4: Attaching hub $_foundHubNumber to user...');

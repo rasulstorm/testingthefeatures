@@ -67,7 +67,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
 
     try {
       final response = await Dio().post(
-        'https://app.iss-control.kz/api/v1/account-management/send-otp',
+        'https://stage-app.iss-control.kz/api/v1/account-management/send-otp',
         queryParameters: {
           // <-- ВОЗВРАЩАЕМ QUERY PARAMETERS
           'phoneNumber': phone,
@@ -100,7 +100,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
     try {
       // Для верификации также используем queryParameters, как в оригинале
       final verifyResponse = await Dio().post(
-        'https://app.iss-control.kz/api/v1/account-management/verify-otp',
+        'https://stage-app.iss-control.kz/api/v1/account-management/verify-otp',
         queryParameters: {'phoneNumber': phone, 'code': code},
       );
 
@@ -110,7 +110,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> with CodeAutoFill {
       if (verifyData['code'] == 0) {
         // А для регистрации, как и было, используем data
         final registerResponse = await Dio().post(
-          'https://app.iss-control.kz/api/v1/account-management/register',
+          'https://stage-app.iss-control.kz/api/v1/account-management/register',
           data: {
             'email': widget.email,
             'password': widget.password,
