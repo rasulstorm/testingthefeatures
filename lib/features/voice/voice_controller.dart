@@ -7,6 +7,7 @@ import 'package:ISS/features/security_control/ws_provider.dart';
 import 'package:ISS/utils/device_utils.dart';
 import 'package:ISS/models/device_models.dart';
 import 'package:flutter/material.dart'; // <-- добавь это
+import 'package:ISS/features/home/utils/device_keys.dart';
 
 class VoiceCommandState {
   final bool initialized;
@@ -152,8 +153,9 @@ class VoiceCommandController extends StateNotifier<VoiceCommandState> {
 
     final ws = ref.read(webSocketNotifierProvider.notifier);
     final payload = {"state": turnOn ? "ON" : "OFF"};
-    ws.sendDeviceCommand(hub.commandHubId, found.id, payload);
-    ws.updateDeviceLocalState(found.id, payload);
+    final deviceKey = DeviceKeys.commandKey(found);
+    ws.updateDeviceLocalState(deviceKey, payload);
+    await ws.sendDeviceCommand(hub.commandHubId, deviceKey, payload);
 
     state = state.copyWith(
       lastActionMessage:

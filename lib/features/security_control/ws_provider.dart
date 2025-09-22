@@ -1,4 +1,3 @@
-// lib/features/security_control/ws_provider.dart
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as dev;
@@ -7,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'package:ISS/core/network/auth_service.dart';
+import 'package:ISS/core/network/dio_provider.dart';
+import 'package:ISS/services/device_command_service.dart';
 
 /// Состояние WebSocket: флаг подключения + карта live-данных по устройствам.
 class WebSocketState {
@@ -30,13 +31,16 @@ class WebSocketState {
 
 final webSocketNotifierProvider =
     StateNotifierProvider<WebSocketNotifier, WebSocketState>((ref) {
-      return WebSocketNotifier(AuthService());
+      final authService = AuthService();
+      final commandService = DeviceCommandService(dio);
+      return WebSocketNotifier(authService, commandService);
     });
 
 /// Класс-нотификатор для управления WS-соединением (legacy слой).
 class WebSocketNotifier extends StateNotifier<WebSocketState> {
   final AuthService _authService;
-  WebSocketNotifier(this._authService)
+  final DeviceCommandService _commandService;
+  WebSocketNotifier(this._authService, this._commandService)
     : super(const WebSocketState(isConnected: false, deviceData: {}));
 
   WebSocketChannel? _channel;
@@ -58,7 +62,7 @@ class WebSocketNotifier extends StateNotifier<WebSocketState> {
   /// Берём первый из кандидатов, нормализуем.
   static String? _extractDeviceKey(Map<String, dynamic> data) {
     final candidates = <String?>[
-      data['deviceId']?.toString(),
+      data['deviceId']?.toString(), // <- приоритет ID
       data['deviceName']?.toString(),
       data['friendlyName']?.toString(),
       (data['device'] is Map ? (data['device']['ieeeAddr']?.toString()) : null),
@@ -105,7 +109,7 @@ class WebSocketNotifier extends StateNotifier<WebSocketState> {
           "details": {"deviceName": key},
         });
         _sendRaw(msg);
-        dev.log('[LegacyWS] flushed SHARE hub=$hubId key=$key');
+        dev.log('[LegacyWS] flushed SHARE hub=$hubId deviceName=$key');
       }
     });
   }
@@ -320,8 +324,8 @@ class WebSocketNotifier extends StateNotifier<WebSocketState> {
   }
 
   /// Публичный API: подписаться на live-данные конкретного устройства (id/friendly/ieee).
-  void sendShareDeviceData(String hubId, String deviceNameOrId) {
-    final key = _normKey(deviceNameOrId);
+  void sendShareDeviceData(String hubId, String deviceIdOrName) {
+    final key = _normKey(deviceIdOrName);
     if (key.isEmpty) return;
 
     _enqueueShare(hubId, key);
@@ -333,46 +337,49 @@ class WebSocketNotifier extends StateNotifier<WebSocketState> {
         "details": {"deviceName": key},
       });
       _sendRaw(msg);
-      dev.log('[LegacyWS] SHARE sent hub=$hubId key=$key');
+      dev.log('[LegacyWS] SHARE sent hub=$hubId deviceName=$key');
     } else {
-      dev.log('[LegacyWS] queued SHARE hub=$hubId key=$key (flush on connect)');
+      dev.log(
+        '[LegacyWS] queued SHARE hub=$hubId deviceName=$key (flush on connect)',
+      );
     }
   }
 
   /// Отправить команду устройству.
-  /// В details кладём deviceName (ключ), payload — как есть.
-  void sendDeviceCommand(
+  /// В HTTP кладём deviceName (ieee/friendly ключ).
+  Future<void> sendDeviceCommand(
     String hubId,
-    String deviceIdentifier, // может быть ieeeAddr, friendlyName и т.д.
+    String
+    deviceIdentifier, // ожидаем ID; допускаем имя, если совпадает по ключу
     Map<String, dynamic> commandPayload,
-  ) {
-    if (_channel == null || !state.isConnected) {
-      dev.log(
-        '[LegacyWS] not connected, skip DEVICE_COMMAND to "$deviceIdentifier"',
+  ) async {
+    // Приводим к нормализованному ключу (если в state уже есть под таким ключом).
+    final deviceKey =
+        deviceIdentifier.trim().isNotEmpty
+            ? deviceIdentifier.trim()
+            : _resolveDeviceKey(deviceIdentifier);
+
+    try {
+      await _commandService.sendCommand(
+        hubId: hubId,
+        deviceName: deviceKey, // <- ВАЖНО: именованный параметр deviceName
+        payload: commandPayload,
       );
-      return;
+      dev.log(
+        '[LegacyWS] HTTP DEVICE_COMMAND hub=$hubId deviceName=$deviceKey payload=$commandPayload',
+      );
+    } on DeviceCommandException catch (e, st) {
+      dev.log('[LegacyWS] sendDeviceCommand error: $e\n$st');
+      rethrow;
     }
-
-    final key = _resolveDeviceKey(deviceIdentifier);
-
-    final msg = jsonEncode({
-      "type": "DEVICE_COMMAND",
-      "hubId": hubId,
-      "details": {"deviceName": key, "payload": commandPayload},
-    });
-
-    _sendRaw(msg);
-    dev.log(
-      '[LegacyWS] DEVICE_COMMAND hub=$hubId key=$key payload=$commandPayload',
-    );
   }
 
   /// Локально обновить состояние девайса (для мгновенного UI без ожидания ответа).
   void updateDeviceLocalState(
-    String deviceNameOrId,
+    String deviceIdOrName,
     Map<String, dynamic> newParameters,
   ) {
-    final key = _resolveDeviceKey(deviceNameOrId);
+    final key = _resolveDeviceKey(deviceIdOrName);
     final updated = Map<String, Map<String, dynamic>>.from(state.deviceData);
     final current = Map<String, dynamic>.from(updated[key] ?? {});
     current.addAll(newParameters);

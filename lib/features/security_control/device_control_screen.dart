@@ -29,7 +29,7 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
   /// ВАЖНО: теперь **в URL добавляем hubId**.
   ///
   /// Прежняя сигнатура сохранена, чтобы не ломать вызовы:
-  /// connect(hubId, deviceName, token: token)
+  /// connect(hubId, deviceId, token: token)
   Future<void> connect(
     String hubId,
     String deviceName, {
@@ -153,7 +153,7 @@ class WebSocketNotifier extends StateNotifier<Map<String, dynamic>> {
       'type': 'DEVICE_COMMAND',
       'hubId': hubId,
       'details': {
-        // серверная сторона сейчас ждёт deviceName; если у тебя строго deviceId — подставь его сюда
+        // серверная сторона ожидает deviceName (ieee)
         'deviceName': deviceKey,
         'payload': payload,
       },

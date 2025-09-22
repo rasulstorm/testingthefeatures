@@ -1405,6 +1405,219 @@ class AppLocalizationsKk extends AppLocalizations {
   String get memberDeletedSuccess => 'Қатысушы сәтті жойылды';
 
   @override
+  String get familyAccessPersonalModeActivated => 'Жеке режим белсендірілді';
+
+  @override
+  String get familyAccessSwitchToPersonal => 'Жеке режим';
+
+  @override
+  String get familyAccessCreateGroup => 'Жаңа топ';
+
+  @override
+  String get familyAccessNoGroupsTitle => 'Топтар жоқ';
+
+  @override
+  String get familyAccessNoGroupsMessage =>
+      'Алғашқы топты жасап, жақындарыңызды шақырыңыз.';
+
+  @override
+  String get familyAccessCreateAction => 'Құру';
+
+  @override
+  String get familyAccessGroupNameLabel => 'Топ атауы';
+
+  @override
+  String get familyAccessInviteEmailsHint => 'Шақыру (email, үтір арқылы)';
+
+  @override
+  String get familyAccessAttachHubOptional =>
+      'Хабты байланыстыру (міндетті емес)';
+
+  @override
+  String get familyAccessAttachHubNone => '— байланыстырмау —';
+
+  @override
+  String get familyAccessGroupCreated => 'Топ құрылды';
+
+  @override
+  String familyAccessGroupActivated(Object name) {
+    return '\"$name\" тобы белсендірілді';
+  }
+
+  @override
+  String familyAccessMembersCount(Object count) {
+    return '$count қатысушы';
+  }
+
+  @override
+  String get familyAccessGroupRenamed => 'Атауы жаңартылды';
+
+  @override
+  String get familyAccessRenameGroupTitle => 'Топты қайта атау';
+
+  @override
+  String get familyAccessInviteMemberTitle => 'Қатысушыны шақыру';
+
+  @override
+  String get familyAccessInviteEmailLabel => 'Қатысушы email';
+
+  @override
+  String get familyAccessRoleLabel => 'Рөлі';
+
+  @override
+  String get familyAccessInviteAction => 'Шақыру';
+
+  @override
+  String get familyAccessInvitationSent => 'Шақыру жіберілді';
+
+  @override
+  String get familyAccessRoleUpdated => 'Рөл жаңартылды';
+
+  @override
+  String familyAccessRemoveMemberTitle(Object name) {
+    return '$name қатысушыны жою?';
+  }
+
+  @override
+  String get familyAccessRemoveMemberMessage =>
+      'Қатысушы топтан алынады. Жалғастыру?';
+
+  @override
+  String get familyAccessMemberRemoved => 'Қатысушы жойылды';
+
+  @override
+  String get familyAccessNoTransferCandidates =>
+      'Құқықты беру үшін қатысушылар жоқ';
+
+  @override
+  String get familyAccessTransferOwnershipTitle => 'Иелік ету құқығын беру';
+
+  @override
+  String get familyAccessSelectMemberLabel => 'Қатысушыны таңдаңыз';
+
+  @override
+  String get familyAccessTransferAction => 'Беру';
+
+  @override
+  String get familyAccessOwnershipTransferred => 'Иелік ету берілді';
+
+  @override
+  String familyAccessDeleteGroupTitle(Object name) {
+    return '\"$name\" тобын жою?';
+  }
+
+  @override
+  String get familyAccessDeleteGroupMessage =>
+      'Топ және оның баптаулары толығымен жойылады.';
+
+  @override
+  String get familyAccessGroupDeleted => 'Топ жойылды';
+
+  @override
+  String get familyAccessNoAttachableHubs =>
+      'Байланыстыруға қолжетімді хаб жоқ';
+
+  @override
+  String get familyAccessAttachHubTitle => 'Хабты байланыстыру';
+
+  @override
+  String get familyAccessSelectHubLabel => 'Хабты таңдаңыз';
+
+  @override
+  String get familyAccessAttachAction => 'Байланыстыру';
+
+  @override
+  String get familyAccessHubAttached => 'Хаб байланыстырылды';
+
+  @override
+  String familyAccessDetachHubTitle(Object name) {
+    return '\"$name\" хабын ажырату?';
+  }
+
+  @override
+  String get familyAccessDetachHubMessage => 'Хаб осы топтан алынып тасталады.';
+
+  @override
+  String get familyAccessDetachAction => 'Ажырату';
+
+  @override
+  String get familyAccessHubDetached => 'Хаб ажыратылды';
+
+  @override
+  String get familyAccessArmPinTitle => 'Қорғауға қою үшін PIN енгізіңіз';
+
+  @override
+  String get familyAccessDisarmPinTitle => 'Қорғаудан алу үшін PIN енгізіңіз';
+
+  @override
+  String get familyAccessPinLabel => 'PIN код';
+
+  @override
+  String familyAccessHubArmed(Object name) {
+    return '\"$name\" қорғанысқа қойылды';
+  }
+
+  @override
+  String familyAccessHubDisarmed(Object name) {
+    return '\"$name\" қорғаныстан алынды';
+  }
+
+  @override
+  String get familyAccessMyGroups => 'Менің топтарым';
+
+  @override
+  String get familyAccessSelectGroupHint =>
+      'Қатынауды, шақыруларды және хабтарды басқару үшін топты таңдаңыз.';
+
+  @override
+  String get familyAccessUseGroup => 'Осы топқа көшу';
+
+  @override
+  String get familyAccessGroupActive => 'Топ белсенді';
+
+  @override
+  String get familyAccessRenameGroupTooltip => 'Қайта атау';
+
+  @override
+  String get familyAccessActiveChip => 'Белсенді';
+
+  @override
+  String get familyAccessDeleteGroupButton => 'Топты жою';
+
+  @override
+  String get familyAccessMembersTitle => 'Қатысушылар';
+
+  @override
+  String get familyAccessChangeRoleTooltip => 'Рөлді өзгерту';
+
+  @override
+  String get familyAccessRemoveMemberTooltip => 'Қатысушыны жою';
+
+  @override
+  String get familyAccessInvitationsTitle => 'Жіберілген шақырулар';
+
+  @override
+  String get familyAccessHubsTitle => 'Хабтар';
+
+  @override
+  String get familyAccessNoHubsLabel => 'Топқа хабтар әлі байланыстырылмаған';
+
+  @override
+  String get familyRoleOwner => 'Иесі';
+
+  @override
+  String get familyRoleAdmin => 'Әкімші';
+
+  @override
+  String get familyRoleUser => 'Қолданушы';
+
+  @override
+  String get familyRoleGuest => 'Қонақ';
+
+  @override
+  String get ok => 'OK';
+
+  @override
   String get addNewHub => 'Жаңа хаб қосу';
 
   @override
@@ -1664,4 +1877,124 @@ class AppLocalizationsKk extends AppLocalizations {
 
   @override
   String get genericSaved => 'Пинкод сақталынды';
+
+  @override
+  String get homeMapTitle => 'Үй картасы';
+
+  @override
+  String get homeMapFriendsButton => 'Достар';
+
+  @override
+  String get homeMapFallback => 'Соңғы координаттар қолданылуда';
+
+  @override
+  String get homeMapShowOffline => 'Офлайнды көрсету';
+
+  @override
+  String homeMapFriendsOnline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дос онлайн',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeMapStatusOnline => 'Онлайн';
+
+  @override
+  String get homeMapStatusOffline => 'Офлайн';
+
+  @override
+  String homeMapDistanceKm(String value) {
+    return '$value км қашықтықта';
+  }
+
+  @override
+  String homeMapDistanceM(int value) {
+    return '$value м қашықтықта';
+  }
+
+  @override
+  String get homeMapUpdatedNow => 'Қазір жаңартылды';
+
+  @override
+  String homeMapUpdatedMinutes(int minutes) {
+    return '$minutes мин бұрын';
+  }
+
+  @override
+  String homeMapUpdatedHours(int hours) {
+    return '$hours сағ бұрын';
+  }
+
+  @override
+  String homeMapUpdatedDays(int days) {
+    return '$days күн бұрын';
+  }
+
+  @override
+  String get homeMapActionRoute => 'Маршрут';
+
+  @override
+  String get homeMapActionMessage => 'Хабарлама';
+
+  @override
+  String get homeMapActionCall => 'Қоңырау';
+
+  @override
+  String get homeMapActionStub => 'Жақында';
+
+  @override
+  String get homeMapPermissionTitle => 'Геолокацияға рұқсат беріңіз';
+
+  @override
+  String get homeMapPermissionDescription =>
+      'Картада сізді және достарыңызды көрсету үшін орналасу деректері қажет.';
+
+  @override
+  String get homeMapOpenSettings => 'Параметрлерді ашу';
+
+  @override
+  String get homeMapNoFriendsTitle => 'Картада көру үшін дос шақырыңыз';
+
+  @override
+  String get homeMapInviteButton => 'Өтінім жіберу';
+
+  @override
+  String get homeMapErrorGeneric => 'Координаттарды жүктеу мүмкін болмады';
+
+  @override
+  String get homeMapErrorUnauthorized => 'Қайта кіріңіз';
+
+  @override
+  String get homeMapErrorForbidden => 'Қолжетімді емес';
+
+  @override
+  String get homeMapErrorNotFound => 'Дос табылмады';
+
+  @override
+  String get homeMapErrorConflict => 'Өтінім бұрын жіберілген';
+
+  @override
+  String get homeMapErrorPermission => 'Геолокацияға рұқсат қажет';
+
+  @override
+  String get homeMapZoomIn => 'Zoom in';
+
+  @override
+  String get homeMapZoomOut => 'Zoom out';
+
+  @override
+  String get homeMapLocate => 'My location';
+
+  @override
+  String get homeMapFit => 'Show all markers';
+
+  @override
+  String get homeMapNoSelf => 'Current location unavailable';
+
+  @override
+  String get generalAllow => 'Рұқсат беру';
 }

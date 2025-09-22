@@ -1,10 +1,11 @@
-// lib/services/websocket_service.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:ISS/services/device_command_service.dart';
 
 final appWebSocketProvider = StateNotifierProvider<AppWebSocketNotifier, bool>(
   (ref) => AppWebSocketNotifier(ref),
@@ -114,25 +115,32 @@ class AppWebSocketNotifier extends StateNotifier<bool> {
     });
   }
 
-  void sendCommand(
+  /// Отправка команды на устройство по ключу (ieee/friendly).
+  Future<void> sendCommand(
     String hubId,
-    String deviceId,
+    String deviceKey,
     Map<String, dynamic> payload,
-  ) {
-    if (!state || _channel == null) {
-      debugPrint('[AppWS] cannot send, socket not connected');
-      return;
+  ) async {
+    try {
+      debugPrint(
+        '[AppWS] HTTP DEVICE_COMMAND request hub=$hubId deviceName=$deviceKey payload=$payload',
+      );
+      await _ref
+          .read(deviceCommandServiceProvider)
+          .sendCommand(
+            hubId: hubId,
+            deviceName: deviceKey, // <- используем deviceName в теле
+            payload: payload,
+          );
+      debugPrint('[AppWS] HTTP DEVICE_COMMAND success hub=$hubId deviceName=$deviceKey');
+    } on DeviceCommandException catch (e) {
+      debugPrint('[AppWS] sendCommand error: $e');
+      rethrow;
     }
-    final command = {
-      "type": "DEVICE_COMMAND",
-      "hubId": hubId,
-      "details": {"deviceId": deviceId, "payload": payload},
-    };
-    _channel!.sink.add(jsonEncode(command));
-    debugPrint('[AppWS] TX DEVICE_COMMAND: $command');
   }
 
-  void sendShareDeviceDataCommand(String hubId, String deviceId) {
+  /// Команда подписки на шаринг данных устройства — по ID.
+  void sendShareDeviceDataCommand(String hubId, String deviceKey) {
     if (!state || _channel == null) {
       debugPrint('[AppWS] cannot share, socket not connected');
       return;
@@ -140,7 +148,7 @@ class AppWebSocketNotifier extends StateNotifier<bool> {
     final command = {
       "type": "SHARE_DEVICE_DATA",
       "hubId": hubId,
-      "details": {"deviceId": deviceId},
+      "details": {"deviceName": deviceKey},
     };
     _channel!.sink.add(jsonEncode(command));
     debugPrint('[AppWS] TX SHARE_DEVICE_DATA: $command');

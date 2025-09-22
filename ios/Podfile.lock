@@ -52,6 +52,9 @@ PODS:
     - Flutter
   - flutter_tts (0.0.1):
     - Flutter
+  - flutter_vlc_player (3.0.3):
+    - Flutter
+    - MobileVLCKit (~> 3.6.1b1)
   - flutter_voice_processor (1.1.2):
     - Flutter
     - ios-voice-processor (~> 1.2.0)
@@ -106,6 +109,7 @@ PODS:
   - Mantle (2.2.0):
     - Mantle/extobjc (= 2.2.0)
   - Mantle/extobjc (2.2.0)
+  - MobileVLCKit (3.6.1b1)
   - nanopb (3.30910.0):
     - nanopb/decode (= 3.30910.0)
     - nanopb/encode (= 3.30910.0)
@@ -148,6 +152,9 @@ PODS:
     - FlutterMacOS
   - url_launcher_ios (0.0.1):
     - Flutter
+  - video_player_avfoundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - webview_flutter_wkwebview (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -165,6 +172,7 @@ DEPENDENCIES:
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
+  - flutter_vlc_player (from `.symlinks/plugins/flutter_vlc_player/ios`)
   - flutter_voice_processor (from `.symlinks/plugins/flutter_voice_processor/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
@@ -179,6 +187,7 @@ DEPENDENCIES:
   - sms_autofill (from `.symlinks/plugins/sms_autofill/ios`)
   - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - video_player_avfoundation (from `.symlinks/plugins/video_player_avfoundation/darwin`)
   - webview_flutter_wkwebview (from `.symlinks/plugins/webview_flutter_wkwebview/darwin`)
   - wifi_scan (from `.symlinks/plugins/wifi_scan/ios`)
 
@@ -196,6 +205,7 @@ SPEC REPOS:
     - ios-voice-processor
     - libwebp
     - Mantle
+    - MobileVLCKit
     - nanopb
     - Porcupine-iOS
     - PromisesObjC
@@ -224,6 +234,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
   flutter_tts:
     :path: ".symlinks/plugins/flutter_tts/ios"
+  flutter_vlc_player:
+    :path: ".symlinks/plugins/flutter_vlc_player/ios"
   flutter_voice_processor:
     :path: ".symlinks/plugins/flutter_voice_processor/ios"
   geolocator_apple:
@@ -252,6 +264,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/speech_to_text/darwin"
   url_launcher_ios:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
+  video_player_avfoundation:
+    :path: ".symlinks/plugins/video_player_avfoundation/darwin"
   webview_flutter_wkwebview:
     :path: ".symlinks/plugins/webview_flutter_wkwebview/darwin"
   wifi_scan:
@@ -275,6 +289,7 @@ SPEC CHECKSUMS:
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   flutter_tts: b88dbc8655d3dc961bc4a796e4e16a4cc1795833
+  flutter_vlc_player: 5464f594a9338e080d240bbe7b10ffe30c7bc8bc
   flutter_voice_processor: f60363f959515eaebc35bcaaf26017596c953fc6
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
@@ -284,6 +299,7 @@ SPEC CHECKSUMS:
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   local_auth_darwin: d2e8c53ef0c4f43c646462e3415432c4dab3ae19
   Mantle: c5aa8794a29a022dfbbfc9799af95f477a69b62d
+  MobileVLCKit: 2d9c7c373393ae43086aeeff890bf0b1afc15c5c
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   network_info_plus: cf61925ab5205dce05a4f0895989afdb6aade5fc
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
@@ -300,9 +316,10 @@ SPEC CHECKSUMS:
   sms_autofill: b36b2147535657fea83d7f3898d7831de70bd8e4
   speech_to_text: 3b313d98516d3d0406cea424782ec25470c59d19
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
+  video_player_avfoundation: 2cef49524dd1f16c5300b9cd6efd9611ce03639b
   webview_flutter_wkwebview: 1821ceac936eba6f7984d89a9f3bcb4dea99ebb2
   wifi_scan: 3254c160abc7266feac359a927f8ab64f2703774
 
-PODFILE CHECKSUM: 69e648211884f31c557cc964e6640900eedf868f
+PODFILE CHECKSUM: 209327a529378a1b3e6c2fcdc0426d4a85dc42db
 
 COCOAPODS: 1.16.2

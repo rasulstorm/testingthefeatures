@@ -1403,6 +1403,219 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memberDeletedSuccess => 'Member successfully deleted';
 
   @override
+  String get familyAccessPersonalModeActivated => 'Personal mode enabled';
+
+  @override
+  String get familyAccessSwitchToPersonal => 'Personal mode';
+
+  @override
+  String get familyAccessCreateGroup => 'New group';
+
+  @override
+  String get familyAccessNoGroupsTitle => 'No groups yet';
+
+  @override
+  String get familyAccessNoGroupsMessage =>
+      'Create your first group and invite family members.';
+
+  @override
+  String get familyAccessCreateAction => 'Create';
+
+  @override
+  String get familyAccessGroupNameLabel => 'Group name';
+
+  @override
+  String get familyAccessInviteEmailsHint =>
+      'Invite (emails separated by comma)';
+
+  @override
+  String get familyAccessAttachHubOptional => 'Attach hub (optional)';
+
+  @override
+  String get familyAccessAttachHubNone => '— no attachment —';
+
+  @override
+  String get familyAccessGroupCreated => 'Group created';
+
+  @override
+  String familyAccessGroupActivated(Object name) {
+    return 'Group \"$name\" is now active';
+  }
+
+  @override
+  String familyAccessMembersCount(Object count) {
+    return '$count members';
+  }
+
+  @override
+  String get familyAccessGroupRenamed => 'Group name updated';
+
+  @override
+  String get familyAccessRenameGroupTitle => 'Rename group';
+
+  @override
+  String get familyAccessInviteMemberTitle => 'Invite member';
+
+  @override
+  String get familyAccessInviteEmailLabel => 'Member email';
+
+  @override
+  String get familyAccessRoleLabel => 'Role';
+
+  @override
+  String get familyAccessInviteAction => 'Invite';
+
+  @override
+  String get familyAccessInvitationSent => 'Invitation sent';
+
+  @override
+  String get familyAccessRoleUpdated => 'Role updated';
+
+  @override
+  String familyAccessRemoveMemberTitle(Object name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get familyAccessRemoveMemberMessage =>
+      'The member will be removed from this group.';
+
+  @override
+  String get familyAccessMemberRemoved => 'Member removed';
+
+  @override
+  String get familyAccessNoTransferCandidates =>
+      'No members available for ownership transfer';
+
+  @override
+  String get familyAccessTransferOwnershipTitle => 'Transfer ownership';
+
+  @override
+  String get familyAccessSelectMemberLabel => 'Select member';
+
+  @override
+  String get familyAccessTransferAction => 'Transfer';
+
+  @override
+  String get familyAccessOwnershipTransferred => 'Ownership transferred';
+
+  @override
+  String familyAccessDeleteGroupTitle(Object name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get familyAccessDeleteGroupMessage =>
+      'The group and its settings will be deleted permanently.';
+
+  @override
+  String get familyAccessGroupDeleted => 'Group deleted';
+
+  @override
+  String get familyAccessNoAttachableHubs => 'No hubs available to attach';
+
+  @override
+  String get familyAccessAttachHubTitle => 'Attach hub';
+
+  @override
+  String get familyAccessSelectHubLabel => 'Select hub';
+
+  @override
+  String get familyAccessAttachAction => 'Attach';
+
+  @override
+  String get familyAccessHubAttached => 'Hub attached';
+
+  @override
+  String familyAccessDetachHubTitle(Object name) {
+    return 'Detach \"$name\"?';
+  }
+
+  @override
+  String get familyAccessDetachHubMessage =>
+      'The hub will be removed from this group.';
+
+  @override
+  String get familyAccessDetachAction => 'Detach';
+
+  @override
+  String get familyAccessHubDetached => 'Hub detached';
+
+  @override
+  String get familyAccessArmPinTitle => 'Enter PIN to arm';
+
+  @override
+  String get familyAccessDisarmPinTitle => 'Enter PIN to disarm';
+
+  @override
+  String get familyAccessPinLabel => 'PIN code';
+
+  @override
+  String familyAccessHubArmed(Object name) {
+    return '\"$name\" armed';
+  }
+
+  @override
+  String familyAccessHubDisarmed(Object name) {
+    return '\"$name\" disarmed';
+  }
+
+  @override
+  String get familyAccessMyGroups => 'My groups';
+
+  @override
+  String get familyAccessSelectGroupHint =>
+      'Select a group to manage access, invitations, and linked hubs.';
+
+  @override
+  String get familyAccessUseGroup => 'Switch to this group';
+
+  @override
+  String get familyAccessGroupActive => 'Group active';
+
+  @override
+  String get familyAccessRenameGroupTooltip => 'Rename';
+
+  @override
+  String get familyAccessActiveChip => 'Active';
+
+  @override
+  String get familyAccessDeleteGroupButton => 'Delete group';
+
+  @override
+  String get familyAccessMembersTitle => 'Members';
+
+  @override
+  String get familyAccessChangeRoleTooltip => 'Change role';
+
+  @override
+  String get familyAccessRemoveMemberTooltip => 'Remove member';
+
+  @override
+  String get familyAccessInvitationsTitle => 'Invitations';
+
+  @override
+  String get familyAccessHubsTitle => 'Hubs';
+
+  @override
+  String get familyAccessNoHubsLabel => 'No hubs linked yet';
+
+  @override
+  String get familyRoleOwner => 'Owner';
+
+  @override
+  String get familyRoleAdmin => 'Admin';
+
+  @override
+  String get familyRoleUser => 'User';
+
+  @override
+  String get familyRoleGuest => 'Guest';
+
+  @override
+  String get ok => 'OK';
+
+  @override
   String get addNewHub => 'Add New Hub';
 
   @override
@@ -1662,4 +1875,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get genericSaved => 'Pin code saved';
+
+  @override
+  String get homeMapTitle => 'Home Map';
+
+  @override
+  String get homeMapFriendsButton => 'Friends';
+
+  @override
+  String get homeMapFallback => 'Using last known locations';
+
+  @override
+  String get homeMapShowOffline => 'Show offline';
+
+  @override
+  String homeMapFriendsOnline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# friends online',
+      one: '# friend online',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeMapStatusOnline => 'Online';
+
+  @override
+  String get homeMapStatusOffline => 'Offline';
+
+  @override
+  String homeMapDistanceKm(String value) {
+    return '$value km away';
+  }
+
+  @override
+  String homeMapDistanceM(int value) {
+    return '$value m away';
+  }
+
+  @override
+  String get homeMapUpdatedNow => 'Updated just now';
+
+  @override
+  String homeMapUpdatedMinutes(int minutes) {
+    return 'Updated $minutes min ago';
+  }
+
+  @override
+  String homeMapUpdatedHours(int hours) {
+    return 'Updated $hours h ago';
+  }
+
+  @override
+  String homeMapUpdatedDays(int days) {
+    return 'Updated $days d ago';
+  }
+
+  @override
+  String get homeMapActionRoute => 'Route';
+
+  @override
+  String get homeMapActionMessage => 'Message';
+
+  @override
+  String get homeMapActionCall => 'Call';
+
+  @override
+  String get homeMapActionStub => 'Coming soon';
+
+  @override
+  String get homeMapPermissionTitle => 'Enable location access';
+
+  @override
+  String get homeMapPermissionDescription =>
+      'To show you and your friends on the map we need access to your location.';
+
+  @override
+  String get homeMapOpenSettings => 'Open settings';
+
+  @override
+  String get homeMapNoFriendsTitle =>
+      'Invite your first friend to see them on the map';
+
+  @override
+  String get homeMapInviteButton => 'Send request';
+
+  @override
+  String get homeMapErrorGeneric => 'Failed to load locations';
+
+  @override
+  String get homeMapErrorUnauthorized => 'You need to log in again';
+
+  @override
+  String get homeMapErrorForbidden => 'Access denied';
+
+  @override
+  String get homeMapErrorNotFound => 'Friend not found';
+
+  @override
+  String get homeMapErrorConflict => 'Request already exists';
+
+  @override
+  String get homeMapErrorPermission => 'Location permission is required';
+
+  @override
+  String get homeMapZoomIn => 'Zoom in';
+
+  @override
+  String get homeMapZoomOut => 'Zoom out';
+
+  @override
+  String get homeMapLocate => 'My location';
+
+  @override
+  String get homeMapFit => 'Show all markers';
+
+  @override
+  String get homeMapNoSelf => 'Current location unavailable';
+
+  @override
+  String get generalAllow => 'Allow';
 }

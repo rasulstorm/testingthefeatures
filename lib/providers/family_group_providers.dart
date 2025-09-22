@@ -1,66 +1,132 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ISS/core/network/dio_provider.dart';
+import 'package:ISS/core/network/group_context.dart';
+import 'package:ISS/models/family_group_models.dart';
+import 'package:ISS/models/hub_models.dart';
+import 'package:ISS/services/family_group_service.dart';
 
-/// Текущая активная семейная группа (null = обычный режим)
-final activeFamilyGroupIdProvider = StateProvider<String?>((ref) => null);
+export 'package:ISS/models/family_group_models.dart'
+    show FamilyGroup, FamilyMember, FamilyInvitation, FamilyRole, FamilyPermissions;
 
-/// Роль текущего пользователя в активной группе
-enum FamilyRole { owner, admin, user, guest }
+class ActiveFamilyGroupState {
+  final String? groupId;
+  final FamilyRole? role;
+  final bool allowUserDisarm;
 
-final activeFamilyRoleProvider = StateProvider<FamilyRole?>((ref) => null);
+  const ActiveFamilyGroupState({
+    this.groupId,
+    this.role,
+    this.allowUserDisarm = false,
+  });
 
-/// Флаг: разрешать DISARM для USER (по умолчанию false; можно переключать из настроек группы)
-final allowUserDisarmProvider = StateProvider<bool>((ref) => false);
+  bool get isActive => groupId != null;
+}
 
-/// Список семейных групп пользователя
-final familyGroupsProvider = FutureProvider.autoDispose<List<dynamic>>((
-  ref,
-) async {
-  final res = await dio.get('/family-group');
-  final body = res.data;
-  return body is List ? body : (body['data'] as List);
+class ActiveFamilyGroupNotifier extends StateNotifier<ActiveFamilyGroupState> {
+  ActiveFamilyGroupNotifier() : super(const ActiveFamilyGroupState());
+
+  void setActiveGroup({
+    String? groupId,
+    FamilyRole? role,
+    bool? allowUserDisarm,
+  }) {
+    if (groupId == null || groupId.isEmpty) {
+      state = const ActiveFamilyGroupState();
+      FamilyGroupContext.clear();
+      return;
+    }
+
+    final next = ActiveFamilyGroupState(
+      groupId: groupId,
+      role: role ?? state.role,
+      allowUserDisarm: allowUserDisarm ?? state.allowUserDisarm,
+    );
+
+    if (state.groupId == next.groupId &&
+        state.role == next.role &&
+        state.allowUserDisarm == next.allowUserDisarm) {
+      FamilyGroupContext.set(
+        groupId: next.groupId,
+        role: next.role,
+        allowUserDisarm: next.allowUserDisarm,
+      );
+      return;
+    }
+
+    state = next;
+    FamilyGroupContext.set(
+      groupId: next.groupId,
+      role: next.role,
+      allowUserDisarm: next.allowUserDisarm,
+    );
+  }
+
+  void activateFromDetails(FamilyGroup group) {
+    if (group.id.isEmpty) return;
+    setActiveGroup(
+      groupId: group.id,
+      role: group.currentUserRole ?? state.role,
+      allowUserDisarm: group.allowUserDisarm,
+    );
+  }
+
+  void clear() => setActiveGroup(groupId: null);
+}
+
+final activeFamilyGroupStateProvider =
+    StateNotifierProvider<ActiveFamilyGroupNotifier, ActiveFamilyGroupState>(
+  (ref) => ActiveFamilyGroupNotifier(),
+);
+
+final activeFamilyGroupIdProvider = Provider<String?>((ref) {
+  return ref.watch(activeFamilyGroupStateProvider).groupId;
 });
 
-/// Хабы/устройства для активной семейной группы
-/// Если backend не требует groupId — параметр будет игнорироваться.
+final activeFamilyRoleProvider = Provider<FamilyRole?>((ref) {
+  return ref.watch(activeFamilyGroupStateProvider).role;
+});
+
+final allowUserDisarmProvider = Provider<bool>((ref) {
+  return ref.watch(activeFamilyGroupStateProvider).allowUserDisarm;
+});
+
+final familyGroupsProvider = FutureProvider.autoDispose<List<FamilyGroup>>(
+  (ref) async {
+    final groups = await familyGroupService.getAllGroups();
+    final activeState = ref.read(activeFamilyGroupStateProvider);
+    final activeId = activeState.groupId;
+    final notifier = ref.read(activeFamilyGroupStateProvider.notifier);
+
+    if (activeId != null) {
+      final match = groups.where((g) => g.id == activeId).toList();
+      if (match.isEmpty) {
+        notifier.clear();
+      } else {
+        final group = match.first;
+        if (group.currentUserRole != null || group.allowUserDisarm) {
+          notifier.setActiveGroup(
+            groupId: group.id,
+            role: group.currentUserRole ?? activeState.role,
+            allowUserDisarm: group.allowUserDisarm,
+          );
+        }
+      }
+    }
+
+    return groups;
+  },
+);
+
+final familyGroupDetailsProvider = FutureProvider.autoDispose.family<
+    FamilyGroup,
+    String>(
+  (ref, groupId) async {
+    final group = await familyGroupService.getGroupById(groupId);
+    ref.read(activeFamilyGroupStateProvider.notifier).activateFromDetails(group);
+    return group;
+  },
+);
+
 final familyHubsProvider = FutureProvider.autoDispose
-    .family<List<dynamic>, String>((ref, groupId) async {
-      final res = await dio.get(
-        '/family-group/hubs',
-        queryParameters: {'groupId': groupId},
-      );
-      final body = res.data;
-      return body is List ? body : (body['data'] as List);
+    .family<List<HubObject>, String>((ref, groupId) async {
+      return familyGroupService.getHubsForGroups(groupId: groupId);
     });
-
-/// Матрица прав (только для видимости/активации UI-кнопок)
-class FamilyPermissions {
-  static bool canView(FamilyRole? r) => true;
-
-  static bool canControlDevices(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin || r == FamilyRole.user;
-
-  static bool canArm(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin;
-
-  static bool canDisarm(FamilyRole? r, {required bool allowUser}) =>
-      r == FamilyRole.owner ||
-      r == FamilyRole.admin ||
-      (allowUser && r == FamilyRole.user);
-
-  static bool canManagePins(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin;
-
-  static bool canManageMembers(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin;
-
-  static bool canAttachDetachHubs(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin;
-
-  static bool canRenameGroup(FamilyRole? r) =>
-      r == FamilyRole.owner || r == FamilyRole.admin;
-
-  static bool canDeleteGroup(FamilyRole? r) => r == FamilyRole.owner;
-
-  static bool canTransferOwnership(FamilyRole? r) => r == FamilyRole.owner;
-}

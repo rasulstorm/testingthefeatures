@@ -579,6 +579,105 @@
   "confirmDeleteMember": "Вы уверены, что хотите удалить этого участника из группы?",
    "roleUpdatedSuccess": "Роль успешно обновлена",
   "memberDeletedSuccess": "Участник успешно удален",
+  "familyAccessPersonalModeActivated": "Личный режим активирован",
+  "familyAccessSwitchToPersonal": "Личный режим",
+  "familyAccessCreateGroup": "Новая группа",
+  "familyAccessNoGroupsTitle": "Групп пока нет",
+  "familyAccessNoGroupsMessage": "Создайте первую группу и пригласите близких",
+  "familyAccessCreateAction": "Создать",
+  "familyAccessGroupNameLabel": "Название группы",
+  "familyAccessInviteEmailsHint": "Пригласить (email через запятую)",
+  "familyAccessAttachHubOptional": "Привязать хаб (необязательно)",
+  "familyAccessAttachHubNone": "— без привязки —",
+  "familyAccessGroupCreated": "Группа создана",
+  "familyAccessGroupActivated": "Группа «{name}» активирована",
+  "@familyAccessGroupActivated": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMembersCount": "Участников: {count}",
+  "@familyAccessMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "familyAccessGroupRenamed": "Название обновлено",
+  "familyAccessRenameGroupTitle": "Переименовать группу",
+  "familyAccessInviteMemberTitle": "Пригласить участника",
+  "familyAccessInviteEmailLabel": "Email участника",
+  "familyAccessRoleLabel": "Роль",
+  "familyAccessInviteAction": "Пригласить",
+  "familyAccessInvitationSent": "Приглашение отправлено",
+  "familyAccessRoleUpdated": "Роль обновлена",
+  "familyAccessRemoveMemberTitle": "Удалить {name}?",
+  "@familyAccessRemoveMemberTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessRemoveMemberMessage": "Участник будет удалён из группы. Продолжить?",
+  "familyAccessMemberRemoved": "Участник удалён",
+  "familyAccessNoTransferCandidates": "Нет участников для передачи прав",
+  "familyAccessTransferOwnershipTitle": "Передать владение",
+  "familyAccessSelectMemberLabel": "Выберите участника",
+  "familyAccessTransferAction": "Передать",
+  "familyAccessOwnershipTransferred": "Владение передано",
+  "familyAccessDeleteGroupTitle": "Удалить группу «{name}»?",
+  "@familyAccessDeleteGroupTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDeleteGroupMessage": "Группа и её настройки будут удалены безвозвратно.",
+  "familyAccessGroupDeleted": "Группа удалена",
+  "familyAccessNoAttachableHubs": "Нет доступных хабов для привязки",
+  "familyAccessAttachHubTitle": "Привязать хаб",
+  "familyAccessSelectHubLabel": "Выберите хаб",
+  "familyAccessAttachAction": "Привязать",
+  "familyAccessHubAttached": "Хаб привязан",
+  "familyAccessDetachHubTitle": "Открепить «{name}»?",
+  "@familyAccessDetachHubTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDetachHubMessage": "Хаб будет удалён из этой группы.",
+  "familyAccessDetachAction": "Открепить",
+  "familyAccessHubDetached": "Хаб откреплён",
+  "familyAccessArmPinTitle": "Введите PIN для постановки на охрану",
+  "familyAccessDisarmPinTitle": "Введите PIN для снятия с охраны",
+  "familyAccessPinLabel": "PIN-код",
+  "familyAccessHubArmed": "Хаб «{name}» на охране",
+  "@familyAccessHubArmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessHubDisarmed": "Хаб «{name}» снят с охраны",
+  "@familyAccessHubDisarmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMyGroups": "Мои группы",
+  "familyAccessSelectGroupHint": "Выберите группу для управления доступом, приглашениями и хабами.",
+  "familyAccessUseGroup": "Использовать эту группу",
+  "familyAccessGroupActive": "Группа активна",
+  "familyAccessRenameGroupTooltip": "Переименовать",
+  "familyAccessActiveChip": "В работе",
+  "familyAccessDeleteGroupButton": "Удалить группу",
+  "familyAccessMembersTitle": "Участники",
+  "familyAccessChangeRoleTooltip": "Изменить роль",
+  "familyAccessRemoveMemberTooltip": "Удалить участника",
+  "familyAccessInvitationsTitle": "Отправленные приглашения",
+  "familyAccessHubsTitle": "Хабы",
+  "familyAccessNoHubsLabel": "В группе пока нет хабов",
+  "familyRoleOwner": "Владелец",
+  "familyRoleAdmin": "Администратор",
+  "familyRoleUser": "Пользователь",
+  "familyRoleGuest": "Гость",
+  "ok": "OK",
   "addNewHub": "Добавить новый хаб",
   "wifiSetupDescription": "Сначала подключите телефон к Wi-Fi хаба (например, 'iss-hub-xxxx'). Затем введите данные вашего ДОМАШНЕГО Wi-Fi ниже.",
   "phoneCurrentWifi": "Текущий Wi-Fi вашего телефона",
@@ -705,5 +804,76 @@
   "searchDevices": "Поиск устройств",
   "selectAll": "Выбор всех устройств",
   "nothingFound": "Устройства не найдены",
-  "genericSaved": "Пинкод сохранен"
+  "genericSaved": "Пинкод сохранен",
+  "homeMapTitle": "Карта дома",
+  "homeMapFriendsButton": "Друзья",
+  "homeMapFallback": "Используем последние координаты",
+  "homeMapShowOffline": "Показывать офлайн",
+  "homeMapFriendsOnline": "{count, plural, one {# друг онлайн} few {# друга онлайн} many {# друзей онлайн} other {# друзей онлайн}}",
+  "@homeMapFriendsOnline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapStatusOnline": "Онлайн",
+  "homeMapStatusOffline": "Офлайн",
+  "homeMapDistanceKm": "До него {value} км",
+  "@homeMapDistanceKm": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeMapDistanceM": "До него {value} м",
+  "@homeMapDistanceM": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedNow": "Обновлено только что",
+  "homeMapUpdatedMinutes": "Обновлено {minutes} мин назад",
+  "@homeMapUpdatedMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedHours": "Обновлено {hours} ч назад",
+  "@homeMapUpdatedHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedDays": "Обновлено {days} дн назад",
+  "@homeMapUpdatedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapActionRoute": "Маршрут",
+  "homeMapActionMessage": "Написать",
+  "homeMapActionCall": "Позвонить",
+  "homeMapActionStub": "Скоро доступно",
+  "homeMapPermissionTitle": "Включите доступ к геопозиции",
+  "homeMapPermissionDescription": "Чтобы показывать вас и друзей на карте, дайте приложению доступ к местоположению.",
+  "homeMapOpenSettings": "Открыть настройки",
+  "homeMapNoFriendsTitle": "Пригласите друга, чтобы видеть его на карте",
+  "homeMapInviteButton": "Отправить заявку",
+  "homeMapErrorGeneric": "Не удалось загрузить координаты",
+  "homeMapErrorUnauthorized": "Нужно повторно войти",
+  "homeMapErrorForbidden": "Доступ запрещён",
+  "homeMapErrorNotFound": "Друг не найден",
+  "homeMapErrorConflict": "Заявка уже создана",
+  "homeMapErrorPermission": "Нужно разрешение на геопозицию",
+  "generalAllow": "Разрешить"
 }

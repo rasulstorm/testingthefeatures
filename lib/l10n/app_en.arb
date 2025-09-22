@@ -574,6 +574,105 @@
   "confirmDeleteMember": "Are you sure you want to remove this member from the group?",
   "roleUpdatedSuccess": "Role updated successfully",
   "memberDeletedSuccess": "Member successfully deleted",
+  "familyAccessPersonalModeActivated": "Personal mode enabled",
+  "familyAccessSwitchToPersonal": "Personal mode",
+  "familyAccessCreateGroup": "New group",
+  "familyAccessNoGroupsTitle": "No groups yet",
+  "familyAccessNoGroupsMessage": "Create your first group and invite family members.",
+  "familyAccessCreateAction": "Create",
+  "familyAccessGroupNameLabel": "Group name",
+  "familyAccessInviteEmailsHint": "Invite (emails separated by comma)",
+  "familyAccessAttachHubOptional": "Attach hub (optional)",
+  "familyAccessAttachHubNone": "— no attachment —",
+  "familyAccessGroupCreated": "Group created",
+  "familyAccessGroupActivated": "Group \"{name}\" is now active",
+  "@familyAccessGroupActivated": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMembersCount": "{count} members",
+  "@familyAccessMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "familyAccessGroupRenamed": "Group name updated",
+  "familyAccessRenameGroupTitle": "Rename group",
+  "familyAccessInviteMemberTitle": "Invite member",
+  "familyAccessInviteEmailLabel": "Member email",
+  "familyAccessRoleLabel": "Role",
+  "familyAccessInviteAction": "Invite",
+  "familyAccessInvitationSent": "Invitation sent",
+  "familyAccessRoleUpdated": "Role updated",
+  "familyAccessRemoveMemberTitle": "Remove {name}?",
+  "@familyAccessRemoveMemberTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessRemoveMemberMessage": "The member will be removed from this group.",
+  "familyAccessMemberRemoved": "Member removed",
+  "familyAccessNoTransferCandidates": "No members available for ownership transfer",
+  "familyAccessTransferOwnershipTitle": "Transfer ownership",
+  "familyAccessSelectMemberLabel": "Select member",
+  "familyAccessTransferAction": "Transfer",
+  "familyAccessOwnershipTransferred": "Ownership transferred",
+  "familyAccessDeleteGroupTitle": "Delete \"{name}\"?",
+  "@familyAccessDeleteGroupTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDeleteGroupMessage": "The group and its settings will be deleted permanently.",
+  "familyAccessGroupDeleted": "Group deleted",
+  "familyAccessNoAttachableHubs": "No hubs available to attach",
+  "familyAccessAttachHubTitle": "Attach hub",
+  "familyAccessSelectHubLabel": "Select hub",
+  "familyAccessAttachAction": "Attach",
+  "familyAccessHubAttached": "Hub attached",
+  "familyAccessDetachHubTitle": "Detach \"{name}\"?",
+  "@familyAccessDetachHubTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDetachHubMessage": "The hub will be removed from this group.",
+  "familyAccessDetachAction": "Detach",
+  "familyAccessHubDetached": "Hub detached",
+  "familyAccessArmPinTitle": "Enter PIN to arm",
+  "familyAccessDisarmPinTitle": "Enter PIN to disarm",
+  "familyAccessPinLabel": "PIN code",
+  "familyAccessHubArmed": "\"{name}\" armed",
+  "@familyAccessHubArmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessHubDisarmed": "\"{name}\" disarmed",
+  "@familyAccessHubDisarmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMyGroups": "My groups",
+  "familyAccessSelectGroupHint": "Select a group to manage access, invitations, and linked hubs.",
+  "familyAccessUseGroup": "Switch to this group",
+  "familyAccessGroupActive": "Group active",
+  "familyAccessRenameGroupTooltip": "Rename",
+  "familyAccessActiveChip": "Active",
+  "familyAccessDeleteGroupButton": "Delete group",
+  "familyAccessMembersTitle": "Members",
+  "familyAccessChangeRoleTooltip": "Change role",
+  "familyAccessRemoveMemberTooltip": "Remove member",
+  "familyAccessInvitationsTitle": "Invitations",
+  "familyAccessHubsTitle": "Hubs",
+  "familyAccessNoHubsLabel": "No hubs linked yet",
+  "familyRoleOwner": "Owner",
+  "familyRoleAdmin": "Admin",
+  "familyRoleUser": "User",
+  "familyRoleGuest": "Guest",
+  "ok": "OK",
   "addNewHub": "Add New Hub",
   "wifiSetupDescription": "First, connect your phone to the hub's Wi-Fi (e.g., 'iss-hub-xxxx'). Then, enter your HOME Wi-Fi credentials below.",
   "phoneCurrentWifi": "Your phone's current Wi-Fi",
@@ -700,5 +799,81 @@
   "searchDevices": "Search for devices",
   "selectAll": "Select all devices",
   "nothingFound": "No devices found",
-  "genericSaved": "Pin code saved"
+  "genericSaved": "Pin code saved",
+  "homeMapTitle": "Home Map",
+  "homeMapFriendsButton": "Friends",
+  "homeMapFallback": "Using last known locations",
+  "homeMapShowOffline": "Show offline",
+  "homeMapFriendsOnline": "{count, plural, one {# friend online} other {# friends online}}",
+  "@homeMapFriendsOnline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapStatusOnline": "Online",
+  "homeMapStatusOffline": "Offline",
+  "homeMapDistanceKm": "{value} km away",
+  "@homeMapDistanceKm": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeMapDistanceM": "{value} m away",
+  "@homeMapDistanceM": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedNow": "Updated just now",
+  "homeMapUpdatedMinutes": "Updated {minutes} min ago",
+  "@homeMapUpdatedMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedHours": "Updated {hours} h ago",
+  "@homeMapUpdatedHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedDays": "Updated {days} d ago",
+  "@homeMapUpdatedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapActionRoute": "Route",
+  "homeMapActionMessage": "Message",
+  "homeMapActionCall": "Call",
+  "homeMapActionStub": "Coming soon",
+  "homeMapPermissionTitle": "Enable location access",
+  "homeMapPermissionDescription": "To show you and your friends on the map we need access to your location.",
+  "homeMapOpenSettings": "Open settings",
+  "homeMapNoFriendsTitle": "Invite your first friend to see them on the map",
+  "homeMapInviteButton": "Send request",
+  "homeMapErrorGeneric": "Failed to load locations",
+  "homeMapErrorUnauthorized": "You need to log in again",
+  "homeMapErrorForbidden": "Access denied",
+  "homeMapErrorNotFound": "Friend not found",
+  "homeMapErrorConflict": "Request already exists",
+  "homeMapErrorPermission": "Location permission is required",
+  "homeMapZoomIn": "Zoom in",
+  "homeMapZoomOut": "Zoom out",
+  "homeMapLocate": "My location",
+  "homeMapFit": "Show all markers",
+  "homeMapNoSelf": "Current location unavailable",
+  "generalAllow": "Allow"
 }

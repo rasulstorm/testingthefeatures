@@ -1,4 +1,7 @@
 // lib/features/devices/device_details_screen.dart
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ISS/appColor.dart';
@@ -44,8 +47,8 @@ class _DeviceDetailsScreenState extends ConsumerState<DeviceDetailsScreen>
     return 'Устройство';
   }
 
-  void _send(Map<String, dynamic> payload) {
-    ref
+  Future<void> _send(Map<String, dynamic> payload) async {
+    await ref
         .read(webSocketNotifierProvider.notifier)
         .sendDeviceCommand(widget.commandHubId, _current.friendlyName, payload);
   }
@@ -110,7 +113,11 @@ class _DeviceDetailsScreenState extends ConsumerState<DeviceDetailsScreen>
             title: const Text('Состояние'),
             value: on,
             onChanged: (v) {
-              _send({'state': v ? 'ON' : 'OFF'});
+              unawaited(
+                _send({'state': v ? 'ON' : 'OFF'}).catchError((error) {
+                  debugPrint('[DeviceDetails] command error: $error');
+                }),
+              );
               _updateLocal({'state': v ? 'ON' : 'OFF'});
             },
           ),
@@ -122,7 +129,11 @@ class _DeviceDetailsScreenState extends ConsumerState<DeviceDetailsScreen>
               value: d.brightness.clamp(1, 254).toDouble(),
               onChanged: (val) {
                 final b = val.round();
-                _send({'brightness': b, 'state': 'ON'});
+                unawaited(
+                  _send({'brightness': b, 'state': 'ON'}).catchError((error) {
+                    debugPrint('[DeviceDetails] command error: $error');
+                  }),
+                );
                 _updateLocal({'brightness': b, 'state': 'ON'});
               },
             ),
@@ -136,7 +147,11 @@ class _DeviceDetailsScreenState extends ConsumerState<DeviceDetailsScreen>
         title: const Text('Состояние'),
         value: d.isOn,
         onChanged: (v) {
-          _send({'state': v ? 'ON' : 'OFF'});
+          unawaited(
+            _send({'state': v ? 'ON' : 'OFF'}).catchError((error) {
+              debugPrint('[DeviceDetails] command error: $error');
+            }),
+          );
           _updateLocal({'state': v ? 'ON' : 'OFF'});
         },
       );

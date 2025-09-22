@@ -2728,6 +2728,390 @@ abstract class AppLocalizations {
   /// **'Member successfully deleted'**
   String get memberDeletedSuccess;
 
+  /// No description provided for @familyAccessPersonalModeActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal mode enabled'**
+  String get familyAccessPersonalModeActivated;
+
+  /// No description provided for @familyAccessSwitchToPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal mode'**
+  String get familyAccessSwitchToPersonal;
+
+  /// No description provided for @familyAccessCreateGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get familyAccessCreateGroup;
+
+  /// No description provided for @familyAccessNoGroupsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No groups yet'**
+  String get familyAccessNoGroupsTitle;
+
+  /// No description provided for @familyAccessNoGroupsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first group and invite family members.'**
+  String get familyAccessNoGroupsMessage;
+
+  /// No description provided for @familyAccessCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get familyAccessCreateAction;
+
+  /// No description provided for @familyAccessGroupNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get familyAccessGroupNameLabel;
+
+  /// No description provided for @familyAccessInviteEmailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite (emails separated by comma)'**
+  String get familyAccessInviteEmailsHint;
+
+  /// No description provided for @familyAccessAttachHubOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach hub (optional)'**
+  String get familyAccessAttachHubOptional;
+
+  /// No description provided for @familyAccessAttachHubNone.
+  ///
+  /// In en, this message translates to:
+  /// **'— no attachment —'**
+  String get familyAccessAttachHubNone;
+
+  /// No description provided for @familyAccessGroupCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Group created'**
+  String get familyAccessGroupCreated;
+
+  /// No description provided for @familyAccessGroupActivated.
+  ///
+  /// In en, this message translates to:
+  /// **'Group \"{name}\" is now active'**
+  String familyAccessGroupActivated(Object name);
+
+  /// No description provided for @familyAccessMembersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} members'**
+  String familyAccessMembersCount(Object count);
+
+  /// No description provided for @familyAccessGroupRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name updated'**
+  String get familyAccessGroupRenamed;
+
+  /// No description provided for @familyAccessRenameGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename group'**
+  String get familyAccessRenameGroupTitle;
+
+  /// No description provided for @familyAccessInviteMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite member'**
+  String get familyAccessInviteMemberTitle;
+
+  /// No description provided for @familyAccessInviteEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Member email'**
+  String get familyAccessInviteEmailLabel;
+
+  /// No description provided for @familyAccessRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get familyAccessRoleLabel;
+
+  /// No description provided for @familyAccessInviteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite'**
+  String get familyAccessInviteAction;
+
+  /// No description provided for @familyAccessInvitationSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation sent'**
+  String get familyAccessInvitationSent;
+
+  /// No description provided for @familyAccessRoleUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Role updated'**
+  String get familyAccessRoleUpdated;
+
+  /// No description provided for @familyAccessRemoveMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String familyAccessRemoveMemberTitle(Object name);
+
+  /// No description provided for @familyAccessRemoveMemberMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The member will be removed from this group.'**
+  String get familyAccessRemoveMemberMessage;
+
+  /// No description provided for @familyAccessMemberRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Member removed'**
+  String get familyAccessMemberRemoved;
+
+  /// No description provided for @familyAccessNoTransferCandidates.
+  ///
+  /// In en, this message translates to:
+  /// **'No members available for ownership transfer'**
+  String get familyAccessNoTransferCandidates;
+
+  /// No description provided for @familyAccessTransferOwnershipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer ownership'**
+  String get familyAccessTransferOwnershipTitle;
+
+  /// No description provided for @familyAccessSelectMemberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select member'**
+  String get familyAccessSelectMemberLabel;
+
+  /// No description provided for @familyAccessTransferAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer'**
+  String get familyAccessTransferAction;
+
+  /// No description provided for @familyAccessOwnershipTransferred.
+  ///
+  /// In en, this message translates to:
+  /// **'Ownership transferred'**
+  String get familyAccessOwnershipTransferred;
+
+  /// No description provided for @familyAccessDeleteGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String familyAccessDeleteGroupTitle(Object name);
+
+  /// No description provided for @familyAccessDeleteGroupMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The group and its settings will be deleted permanently.'**
+  String get familyAccessDeleteGroupMessage;
+
+  /// No description provided for @familyAccessGroupDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Group deleted'**
+  String get familyAccessGroupDeleted;
+
+  /// No description provided for @familyAccessNoAttachableHubs.
+  ///
+  /// In en, this message translates to:
+  /// **'No hubs available to attach'**
+  String get familyAccessNoAttachableHubs;
+
+  /// No description provided for @familyAccessAttachHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach hub'**
+  String get familyAccessAttachHubTitle;
+
+  /// No description provided for @familyAccessSelectHubLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select hub'**
+  String get familyAccessSelectHubLabel;
+
+  /// No description provided for @familyAccessAttachAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach'**
+  String get familyAccessAttachAction;
+
+  /// No description provided for @familyAccessHubAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Hub attached'**
+  String get familyAccessHubAttached;
+
+  /// No description provided for @familyAccessDetachHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach \"{name}\"?'**
+  String familyAccessDetachHubTitle(Object name);
+
+  /// No description provided for @familyAccessDetachHubMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The hub will be removed from this group.'**
+  String get familyAccessDetachHubMessage;
+
+  /// No description provided for @familyAccessDetachAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Detach'**
+  String get familyAccessDetachAction;
+
+  /// No description provided for @familyAccessHubDetached.
+  ///
+  /// In en, this message translates to:
+  /// **'Hub detached'**
+  String get familyAccessHubDetached;
+
+  /// No description provided for @familyAccessArmPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN to arm'**
+  String get familyAccessArmPinTitle;
+
+  /// No description provided for @familyAccessDisarmPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN to disarm'**
+  String get familyAccessDisarmPinTitle;
+
+  /// No description provided for @familyAccessPinLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN code'**
+  String get familyAccessPinLabel;
+
+  /// No description provided for @familyAccessHubArmed.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" armed'**
+  String familyAccessHubArmed(Object name);
+
+  /// No description provided for @familyAccessHubDisarmed.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" disarmed'**
+  String familyAccessHubDisarmed(Object name);
+
+  /// No description provided for @familyAccessMyGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'My groups'**
+  String get familyAccessMyGroups;
+
+  /// No description provided for @familyAccessSelectGroupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a group to manage access, invitations, and linked hubs.'**
+  String get familyAccessSelectGroupHint;
+
+  /// No description provided for @familyAccessUseGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to this group'**
+  String get familyAccessUseGroup;
+
+  /// No description provided for @familyAccessGroupActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Group active'**
+  String get familyAccessGroupActive;
+
+  /// No description provided for @familyAccessRenameGroupTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get familyAccessRenameGroupTooltip;
+
+  /// No description provided for @familyAccessActiveChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get familyAccessActiveChip;
+
+  /// No description provided for @familyAccessDeleteGroupButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete group'**
+  String get familyAccessDeleteGroupButton;
+
+  /// No description provided for @familyAccessMembersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get familyAccessMembersTitle;
+
+  /// No description provided for @familyAccessChangeRoleTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Change role'**
+  String get familyAccessChangeRoleTooltip;
+
+  /// No description provided for @familyAccessRemoveMemberTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove member'**
+  String get familyAccessRemoveMemberTooltip;
+
+  /// No description provided for @familyAccessInvitationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitations'**
+  String get familyAccessInvitationsTitle;
+
+  /// No description provided for @familyAccessHubsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hubs'**
+  String get familyAccessHubsTitle;
+
+  /// No description provided for @familyAccessNoHubsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No hubs linked yet'**
+  String get familyAccessNoHubsLabel;
+
+  /// No description provided for @familyRoleOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get familyRoleOwner;
+
+  /// No description provided for @familyRoleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get familyRoleAdmin;
+
+  /// No description provided for @familyRoleUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get familyRoleUser;
+
+  /// No description provided for @familyRoleGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get familyRoleGuest;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
   /// No description provided for @addNewHub.
   ///
   /// In en, this message translates to:
@@ -3225,6 +3609,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pin code saved'**
   String get genericSaved;
+
+  /// No description provided for @homeMapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Map'**
+  String get homeMapTitle;
+
+  /// No description provided for @homeMapFriendsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends'**
+  String get homeMapFriendsButton;
+
+  /// No description provided for @homeMapFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Using last known locations'**
+  String get homeMapFallback;
+
+  /// No description provided for @homeMapShowOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Show offline'**
+  String get homeMapShowOffline;
+
+  /// No description provided for @homeMapFriendsOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# friend online} other {# friends online}}'**
+  String homeMapFriendsOnline(int count);
+
+  /// No description provided for @homeMapStatusOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get homeMapStatusOnline;
+
+  /// No description provided for @homeMapStatusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get homeMapStatusOffline;
+
+  /// No description provided for @homeMapDistanceKm.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} km away'**
+  String homeMapDistanceKm(String value);
+
+  /// No description provided for @homeMapDistanceM.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} m away'**
+  String homeMapDistanceM(int value);
+
+  /// No description provided for @homeMapUpdatedNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated just now'**
+  String get homeMapUpdatedNow;
+
+  /// No description provided for @homeMapUpdatedMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {minutes} min ago'**
+  String homeMapUpdatedMinutes(int minutes);
+
+  /// No description provided for @homeMapUpdatedHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {hours} h ago'**
+  String homeMapUpdatedHours(int hours);
+
+  /// No description provided for @homeMapUpdatedDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {days} d ago'**
+  String homeMapUpdatedDays(int days);
+
+  /// No description provided for @homeMapActionRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
+  String get homeMapActionRoute;
+
+  /// No description provided for @homeMapActionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get homeMapActionMessage;
+
+  /// No description provided for @homeMapActionCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get homeMapActionCall;
+
+  /// No description provided for @homeMapActionStub.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get homeMapActionStub;
+
+  /// No description provided for @homeMapPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable location access'**
+  String get homeMapPermissionTitle;
+
+  /// No description provided for @homeMapPermissionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'To show you and your friends on the map we need access to your location.'**
+  String get homeMapPermissionDescription;
+
+  /// No description provided for @homeMapOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get homeMapOpenSettings;
+
+  /// No description provided for @homeMapNoFriendsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite your first friend to see them on the map'**
+  String get homeMapNoFriendsTitle;
+
+  /// No description provided for @homeMapInviteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get homeMapInviteButton;
+
+  /// No description provided for @homeMapErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load locations'**
+  String get homeMapErrorGeneric;
+
+  /// No description provided for @homeMapErrorUnauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to log in again'**
+  String get homeMapErrorUnauthorized;
+
+  /// No description provided for @homeMapErrorForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied'**
+  String get homeMapErrorForbidden;
+
+  /// No description provided for @homeMapErrorNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend not found'**
+  String get homeMapErrorNotFound;
+
+  /// No description provided for @homeMapErrorConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Request already exists'**
+  String get homeMapErrorConflict;
+
+  /// No description provided for @homeMapErrorPermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is required'**
+  String get homeMapErrorPermission;
+
+  /// No description provided for @homeMapZoomIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get homeMapZoomIn;
+
+  /// No description provided for @homeMapZoomOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get homeMapZoomOut;
+
+  /// No description provided for @homeMapLocate.
+  ///
+  /// In en, this message translates to:
+  /// **'My location'**
+  String get homeMapLocate;
+
+  /// No description provided for @homeMapFit.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all markers'**
+  String get homeMapFit;
+
+  /// No description provided for @homeMapNoSelf.
+  ///
+  /// In en, this message translates to:
+  /// **'Current location unavailable'**
+  String get homeMapNoSelf;
+
+  /// No description provided for @generalAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get generalAllow;
 }
 
 class _AppLocalizationsDelegate

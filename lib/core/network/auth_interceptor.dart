@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'dart:async';
 import 'package:ISS/core/network/auth_service.dart';
+import 'package:ISS/core/network/group_context.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ISS/main.dart';
 
@@ -28,6 +29,11 @@ class AuthInterceptor extends Interceptor {
     final token = await _authService.getAccessToken();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+    }
+
+    final activeGroupId = FamilyGroupContext.activeGroupId;
+    if (activeGroupId != null && activeGroupId.isNotEmpty) {
+      options.headers['X-Active-Group'] = activeGroupId;
     }
 
     handler.next(options);

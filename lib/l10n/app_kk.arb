@@ -578,6 +578,105 @@
   "confirmDeleteMember": "Сіз бұл қатысушыны топтан жойғыңыз келетініне сенімдісіз бе?",
    "roleUpdatedSuccess": "Рөл сәтті жаңартылды",
   "memberDeletedSuccess": "Қатысушы сәтті жойылды",
+  "familyAccessPersonalModeActivated": "Жеке режим белсендірілді",
+  "familyAccessSwitchToPersonal": "Жеке режим",
+  "familyAccessCreateGroup": "Жаңа топ",
+  "familyAccessNoGroupsTitle": "Топтар жоқ",
+  "familyAccessNoGroupsMessage": "Алғашқы топты жасап, жақындарыңызды шақырыңыз.",
+  "familyAccessCreateAction": "Құру",
+  "familyAccessGroupNameLabel": "Топ атауы",
+  "familyAccessInviteEmailsHint": "Шақыру (email, үтір арқылы)",
+  "familyAccessAttachHubOptional": "Хабты байланыстыру (міндетті емес)",
+  "familyAccessAttachHubNone": "— байланыстырмау —",
+  "familyAccessGroupCreated": "Топ құрылды",
+  "familyAccessGroupActivated": "\"{name}\" тобы белсендірілді",
+  "@familyAccessGroupActivated": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMembersCount": "{count} қатысушы",
+  "@familyAccessMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "familyAccessGroupRenamed": "Атауы жаңартылды",
+  "familyAccessRenameGroupTitle": "Топты қайта атау",
+  "familyAccessInviteMemberTitle": "Қатысушыны шақыру",
+  "familyAccessInviteEmailLabel": "Қатысушы email",
+  "familyAccessRoleLabel": "Рөлі",
+  "familyAccessInviteAction": "Шақыру",
+  "familyAccessInvitationSent": "Шақыру жіберілді",
+  "familyAccessRoleUpdated": "Рөл жаңартылды",
+  "familyAccessRemoveMemberTitle": "{name} қатысушыны жою?",
+  "@familyAccessRemoveMemberTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessRemoveMemberMessage": "Қатысушы топтан алынады. Жалғастыру?",
+  "familyAccessMemberRemoved": "Қатысушы жойылды",
+  "familyAccessNoTransferCandidates": "Құқықты беру үшін қатысушылар жоқ",
+  "familyAccessTransferOwnershipTitle": "Иелік ету құқығын беру",
+  "familyAccessSelectMemberLabel": "Қатысушыны таңдаңыз",
+  "familyAccessTransferAction": "Беру",
+  "familyAccessOwnershipTransferred": "Иелік ету берілді",
+  "familyAccessDeleteGroupTitle": "\"{name}\" тобын жою?",
+  "@familyAccessDeleteGroupTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDeleteGroupMessage": "Топ және оның баптаулары толығымен жойылады.",
+  "familyAccessGroupDeleted": "Топ жойылды",
+  "familyAccessNoAttachableHubs": "Байланыстыруға қолжетімді хаб жоқ",
+  "familyAccessAttachHubTitle": "Хабты байланыстыру",
+  "familyAccessSelectHubLabel": "Хабты таңдаңыз",
+  "familyAccessAttachAction": "Байланыстыру",
+  "familyAccessHubAttached": "Хаб байланыстырылды",
+  "familyAccessDetachHubTitle": "\"{name}\" хабын ажырату?",
+  "@familyAccessDetachHubTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessDetachHubMessage": "Хаб осы топтан алынып тасталады.",
+  "familyAccessDetachAction": "Ажырату",
+  "familyAccessHubDetached": "Хаб ажыратылды",
+  "familyAccessArmPinTitle": "Қорғауға қою үшін PIN енгізіңіз",
+  "familyAccessDisarmPinTitle": "Қорғаудан алу үшін PIN енгізіңіз",
+  "familyAccessPinLabel": "PIN код",
+  "familyAccessHubArmed": "\"{name}\" қорғанысқа қойылды",
+  "@familyAccessHubArmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessHubDisarmed": "\"{name}\" қорғаныстан алынды",
+  "@familyAccessHubDisarmed": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "familyAccessMyGroups": "Менің топтарым",
+  "familyAccessSelectGroupHint": "Қатынауды, шақыруларды және хабтарды басқару үшін топты таңдаңыз.",
+  "familyAccessUseGroup": "Осы топқа көшу",
+  "familyAccessGroupActive": "Топ белсенді",
+  "familyAccessRenameGroupTooltip": "Қайта атау",
+  "familyAccessActiveChip": "Белсенді",
+  "familyAccessDeleteGroupButton": "Топты жою",
+  "familyAccessMembersTitle": "Қатысушылар",
+  "familyAccessChangeRoleTooltip": "Рөлді өзгерту",
+  "familyAccessRemoveMemberTooltip": "Қатысушыны жою",
+  "familyAccessInvitationsTitle": "Жіберілген шақырулар",
+  "familyAccessHubsTitle": "Хабтар",
+  "familyAccessNoHubsLabel": "Топқа хабтар әлі байланыстырылмаған",
+  "familyRoleOwner": "Иесі",
+  "familyRoleAdmin": "Әкімші",
+  "familyRoleUser": "Қолданушы",
+  "familyRoleGuest": "Қонақ",
+  "ok": "OK",
   "addNewHub": "Жаңа хаб қосу",
   "wifiSetupDescription": "Алдымен телефонды хабтың Wi-Fi желісіне қосыңыз (мысалы, 'iss-hub-xxxx'). Содан кейін төменде ҮЙДЕГІ Wi-Fi деректерін енгізіңіз.",
   "phoneCurrentWifi": "Телефоныңыздың ағымдағы Wi-Fi желісі",
@@ -704,5 +803,76 @@
   "searchDevices": "Құрылғыларды іздеу",
   "selectAll": "Барлық құрылғыларды таңдаңыз",
   "nothingFound": "Ешқандай құрылғы табылмады",
-  "genericSaved": "Пинкод сақталынды"
+  "genericSaved": "Пинкод сақталынды",
+  "homeMapTitle": "Үй картасы",
+  "homeMapFriendsButton": "Достар",
+  "homeMapFallback": "Соңғы координаттар қолданылуда",
+  "homeMapShowOffline": "Офлайнды көрсету",
+  "homeMapFriendsOnline": "{count, plural, other {{count} дос онлайн}}",
+  "@homeMapFriendsOnline": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapStatusOnline": "Онлайн",
+  "homeMapStatusOffline": "Офлайн",
+  "homeMapDistanceKm": "{value} км қашықтықта",
+  "@homeMapDistanceKm": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeMapDistanceM": "{value} м қашықтықта",
+  "@homeMapDistanceM": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedNow": "Қазір жаңартылды",
+  "homeMapUpdatedMinutes": "{minutes} мин бұрын",
+  "@homeMapUpdatedMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedHours": "{hours} сағ бұрын",
+  "@homeMapUpdatedHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapUpdatedDays": "{days} күн бұрын",
+  "@homeMapUpdatedDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "homeMapActionRoute": "Маршрут",
+  "homeMapActionMessage": "Хабарлама",
+  "homeMapActionCall": "Қоңырау",
+  "homeMapActionStub": "Жақында",
+  "homeMapPermissionTitle": "Геолокацияға рұқсат беріңіз",
+  "homeMapPermissionDescription": "Картада сізді және достарыңызды көрсету үшін орналасу деректері қажет.",
+  "homeMapOpenSettings": "Параметрлерді ашу",
+  "homeMapNoFriendsTitle": "Картада көру үшін дос шақырыңыз",
+  "homeMapInviteButton": "Өтінім жіберу",
+  "homeMapErrorGeneric": "Координаттарды жүктеу мүмкін болмады",
+  "homeMapErrorUnauthorized": "Қайта кіріңіз",
+  "homeMapErrorForbidden": "Қолжетімді емес",
+  "homeMapErrorNotFound": "Дос табылмады",
+  "homeMapErrorConflict": "Өтінім бұрын жіберілген",
+  "homeMapErrorPermission": "Геолокацияға рұқсат қажет",
+  "generalAllow": "Рұқсат беру"
 }

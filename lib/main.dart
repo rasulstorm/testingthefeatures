@@ -10,12 +10,14 @@ import 'package:ISS/services/location_service.dart' as loc;
 import 'package:ISS/main_screen.dart';
 import 'package:ISS/initial_loading_screen.dart';
 import 'package:ISS/appColor.dart';
+import 'package:ISS/onboarding_screen.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/features/voice/voice_control_screen.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/features/family/group_list_screen.dart';
 import 'package:ISS/features/family/group_create_screen.dart';
 import 'package:ISS/features/family/group_manage_screen.dart';
+import 'package:ISS/features/family/family_access_screen.dart';
 import 'package:ISS/core/network/auth_service.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/services/local_auth_service.dart';
@@ -34,14 +36,12 @@ import 'package:ISS/features/settings/settings_screen.dart';
 import 'package:ISS/features/settings/contract.dart';
 import 'package:ISS/features/about_us/about_us_screen.dart';
 import 'package:ISS/features/notifications/notifications_provider.dart';
-import 'package:ISS/features/scenarios/scenarios_screen.dart';
-import 'package:ISS/features/scenarios/scenario_creation_screen.dart';
+import 'package:ISS/features/scenarios/presentation/screens/scenarios_screen.dart';
 import 'package:ISS/features/wifi_setup/wifi_setup_screen.dart';
-import 'package:ISS/features/rooms/add_edit_room_screen.dart';
-import 'package:ISS/features/rooms/assign_devices_screen.dart';
-import 'package:ISS/models/space_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ISS/features/ai_chat/ai_chat_screen.dart';
+import 'package:ISS/features/home_map/presentation/home_map_screen.dart';
+import 'package:ISS/features/friends/presentation/screens/friends_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -63,6 +63,12 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
   Future<void> _loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
+    final seen = prefs.getBool("onboarding_seen") ?? false;
+    if (!seen) {
+      state =
+          ThemeMode.light; // по умолчанию светлая тема для новых пользователей
+      return;
+    }
     final themeIndex = prefs.getInt('themeMode');
     if (themeIndex != null) {
       state = ThemeMode.values[themeIndex];
@@ -295,7 +301,10 @@ final GoRouter _router = GoRouter(
       path: '/about-us',
       builder: (context, state) => const AboutUsScreen(),
     ),
-    GoRoute(path: '/ai-chat', builder: (_, __) => const AiChatScreen()),
+    GoRoute(
+      path: '/ai-chat',
+      builder: (context, state) => const AiChatScreen(),
+    ),
     GoRoute(
       path: '/notifications',
       builder: (context, state) => NotificationsScreen(),
@@ -304,10 +313,22 @@ final GoRouter _router = GoRouter(
       path: '/voice-control',
       builder: (context, state) => const VoiceControlScreen(),
     ),
+    GoRoute(
+      path: '/home/map',
+      builder: (context, state) => const HomeMapScreen(),
+    ),
+    GoRoute(
+      path: '/friends',
+      builder: (context, state) => const FriendsScreen(),
+    ),
     GoRoute(path: '/register', builder: (context, state) => RegisterScreen()),
     GoRoute(
       path: '/change-password',
       builder: (context, state) => ChangePasswordScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
     ),
     GoRoute(
       path: '/otp',
@@ -352,18 +373,7 @@ final GoRouter _router = GoRouter(
       path: '/scenarios',
       builder: (context, state) => const ScenariosScreen(),
     ),
-    GoRoute(
-      path: '/create-scenario',
-      builder: (context, state) => const ScenarioCreationScreen(),
-    ),
-    GoRoute(
-      path: '/edit-scenario',
-      builder: (context, state) {
-        final data = state.extra as Map<String, dynamic>?;
-        return ScenarioCreationScreen(initialScenario: data);
-      },
-    ),
-
+    GoRoute(path: '/scenarios', builder: (c, s) => const ScenariosScreen()),
     // Настройка Хаба
     GoRoute(
       path: '/wifi-setup',
@@ -371,11 +381,8 @@ final GoRouter _router = GoRouter(
     ),
     // Комнаты
     GoRoute(
-      path: '/add-room',
-      builder: (context, state) {
-        final space = state.extra as Space;
-        return AddEditRoomScreen(space: space);
-      },
+      path: '/family/access',
+      builder: (context, state) => const FamilyAccessScreen(),
     ),
     GoRoute(
       path: '/family/list',
@@ -393,24 +400,6 @@ final GoRouter _router = GoRouter(
           groupId: extra['groupId'] as String,
           name: extra['name'] as String? ?? '',
         );
-      },
-    ),
-    GoRoute(
-      path: '/edit-room',
-      builder: (context, state) {
-        final params = state.extra as Map<String, dynamic>;
-        final space = params['space'] as Space;
-        final room = params['room'] as Room;
-        return AddEditRoomScreen(space: space, room: room);
-      },
-    ),
-    GoRoute(
-      path: '/assign-devices',
-      builder: (context, state) {
-        final params = state.extra as Map<String, dynamic>;
-        final room = params['room'] as Room;
-        final hubId = params['hubId'] as String;
-        return AssignDevicesScreen(room: room, hubId: hubId);
       },
     ),
   ],

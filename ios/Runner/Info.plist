@@ -30,11 +30,6 @@
   <key>CFBundleVersion</key>
   <string>$(FLUTTER_BUILD_NUMBER)</string>
 
-  <key>NSBonjourServices</key>
-  <array>
-    <string>_dartobservatory._tcp</string>
-  </array>
-
   <key>LSRequiresIPhoneOS</key>
   <true/>
 
@@ -52,7 +47,7 @@
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Приложение сохраняет изображения в вашу фотопленку.</string>
 
-  <!-- Face ID (local_auth) -->
+  <!-- Face ID -->
   <key>NSFaceIDUsageDescription</key>
   <string>Face ID используется для быстрого и безопасного входа.</string>
 
@@ -79,6 +74,46 @@
   <key>UIMainStoryboardFile</key>
   <string>Main</string>
 
+  <!-- ATS: разрешаем HTTP для медиапотоков и добавляем исключение для IP -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <!-- Правильный ключ: NSAllowsArbitraryLoadsForMedia -->
+    <key>NSAllowsArbitraryLoadsForMedia</key>
+    <true/>
+
+    <!-- WebView не трогаем -->
+    <key>NSAllowsArbitraryLoadsInWebContent</key>
+    <false/>
+
+    <key>NSExceptionDomains</key>
+    <dict>
+      <key>136.243.133.106</key>
+      <dict>
+        <key>NSIncludesSubdomains</key>
+        <true/>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <true/>
+        <key>NSExceptionRequiresForwardSecrecy</key>
+        <false/>
+      </dict>
+    </dict>
+  </dict>
+
+  <!-- Локальная сеть / Bonjour -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Приложению нужен доступ к локальной сети для подключения к устройствам</string>
+
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_dartobservatory._tcp</string>
+    <string>_http._tcp</string>
+    <string>_ws._tcp</string>
+  </array>
+
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <false/>
+
+  <!-- Ориентации -->
   <key>UISupportedInterfaceOrientations</key>
   <array>
     <string>UIInterfaceOrientationPortrait</string>
@@ -92,16 +127,5 @@
     <string>UIInterfaceOrientationLandscapeLeft</string>
     <string>UIInterfaceOrientationLandscapeRight</string>
   </array>
-  <key>NSLocalNetworkUsageDescription</key>
-<string>Приложению нужен доступ к локальной сети для подключения к устройствам</string>
-
-<key>NSBonjourServices</key>
-<array>
-    <string>_dartobservatory._tcp</string>
-    <string>_http._tcp</string>
-    <string>_ws._tcp</string>
-</array>
-  <key>UIViewControllerBasedStatusBarAppearance</key>
-  <false/>
 </dict>
 </plist>

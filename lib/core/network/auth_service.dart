@@ -1,4 +1,6 @@
 // lib/core/network/auth_service.dart
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -116,5 +118,37 @@ class AuthService {
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
     debugPrint('[AuthService] All tokens cleared.');
+  }
+
+  Map<String, dynamic>? _decodePayload(String token) {
+    final parts = token.split('.');
+    if (parts.length < 2) return null;
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final map = jsonDecode(decoded);
+      if (map is Map<String, dynamic>) {
+        return map;
+      }
+    } catch (e) {
+      debugPrint('[AuthService] Failed to decode token payload: $e');
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getAccessTokenPayload() async {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty) return null;
+    return _decodePayload(token);
+  }
+
+  Future<String?> getCurrentUserEmail() async {
+    final payload = await getAccessTokenPayload();
+    if (payload == null) return null;
+    final username = payload['username'] ?? payload['email'];
+    if (username is String && username.isNotEmpty) {
+      return username;
+    }
+    return null;
   }
 }

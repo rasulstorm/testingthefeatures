@@ -12,7 +12,8 @@ class GroupListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(familyGroupsProvider);
-    final activeId = ref.watch(activeFamilyGroupIdProvider);
+    final activeState = ref.watch(activeFamilyGroupStateProvider);
+    final activeId = activeState.groupId;
 
     return Scaffold(
       appBar: AppBar(
@@ -21,7 +22,7 @@ class GroupListScreen extends ConsumerWidget {
           TextButton(
             onPressed: () {
               // Выход из family-режима
-              ref.read(activeFamilyGroupIdProvider.notifier).state = null;
+              ref.read(activeFamilyGroupStateProvider.notifier).clear();
               Navigator.pop(context);
             },
             child: const Text('Личный', style: TextStyle(color: Colors.white)),
@@ -86,7 +87,11 @@ class GroupListScreen extends ConsumerWidget {
                 ),
                 onTap: () {
                   // Включаем family-режим и возвращаемся на HomeScreen
-                  ref.read(activeFamilyGroupIdProvider.notifier).state = g.id;
+                  ref.read(activeFamilyGroupStateProvider.notifier).setActiveGroup(
+                        groupId: g.id,
+                        role: g.currentUserRole,
+                        allowUserDisarm: g.allowUserDisarm,
+                      );
                   Navigator.pop(context);
                 },
               );

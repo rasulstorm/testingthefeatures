@@ -461,29 +461,31 @@ class _HeaderHero extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          height: 220,
-          width: double.infinity,
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Мой профиль', style: AppStyles.headline3(context)),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: AppStyles.bodyText2(
-                    context,
-                  ).copyWith(color: AppColors.getSecondaryTextColor(context)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              height: 220,
+              width: double.infinity,
+              decoration: BoxDecoration(gradient: gradient),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Мой профиль', style: AppStyles.headline3(context)),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppStyles.bodyText2(context).copyWith(
+                        color: AppColors.getSecondaryTextColor(context),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -619,8 +621,8 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: AppStyles.cardDecoration(context),
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: AppStyles.cardDecoration(context),
       child: Column(children: children),
     );
   }
@@ -647,9 +649,10 @@ class _EditableTile extends StatelessWidget {
       title: Text(title, style: AppStyles.bodyText2(context)),
       subtitle: Text(
         value.isEmpty ? '—' : value,
-        style: AppStyles.bodyText1(
-          context,
-        ).copyWith(fontWeight: FontWeight.w600),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppStyles.bodyText1(context)
+            .copyWith(fontWeight: FontWeight.w600),
       ),
       trailing: Icon(
         Icons.edit,
@@ -678,9 +681,10 @@ class _InfoTile extends StatelessWidget {
       title: Text(title, style: AppStyles.bodyText2(context)),
       subtitle: Text(
         value.isEmpty ? '—' : value,
-        style: AppStyles.bodyText1(
-          context,
-        ).copyWith(fontWeight: FontWeight.w600),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppStyles.bodyText1(context)
+            .copyWith(fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -690,9 +694,9 @@ class _DividerLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Divider(
-      color: AppColors.getBorderGrayColor(context),
+      color: AppColors.getBorderGrayColor(context).withOpacity(0.4),
       height: 1,
-      thickness: 0.8,
+      thickness: 0.7,
     );
   }
 }

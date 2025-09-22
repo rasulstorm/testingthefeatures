@@ -1,20 +1,16 @@
 // lib/main_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:ISS/appColor.dart';
-import 'package:ISS/appstyles.dart';
-import 'package:ISS/features/scenarios/scenarios_screen.dart';
+// import 'package:ISS/appstyles.dart'; // не используется здесь
+import 'package:ISS/features/scenarios/presentation/screens/scenarios_screen.dart';
 import 'package:ISS/features/settings/settings_screen.dart';
 import 'package:ISS/l10n/app_localizations.dart';
 import 'package:ISS/features/home/home_screen.dart';
 import 'package:ISS/services/firebase_messaging_service.dart';
-import 'package:ISS/services/picovoice_service.dart';
-import 'package:ISS/features/rooms/rooms_and_devices_screen.dart';
 
-// >>> добавь импорт экрана AI-чата
-import 'package:ISS/features/ai_chat/ai_chat_screen.dart';
+// НОВОЕ: таб с камерами
+import 'package:ISS/features/camera/presentation/screens/camera_screen.dart';
 
 class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
@@ -23,157 +19,61 @@ class MainScreen extends ConsumerStatefulWidget {
   ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends ConsumerState<MainScreen>
-    with SingleTickerProviderStateMixin {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int _selectedIndex = 0;
-  late final AnimationController _animationController;
-  late final Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-    _animation = Tween<double>(begin: 1.0, end: 1.25).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(firebaseMessagingServiceProvider).init();
     });
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  // >>> теперь 5 страниц: Home, Devices, AI, Scenarios, Settings
+  // 4 страницы: Home, Scenarios, Cameras, Settings
   static final List<Widget> _pages = <Widget>[
     const HomeScreen(),
-    const RoomsAndDevicesScreen(),
-    //  const AiChatScreen(), // <<< новая вкладка
     const ScenariosScreen(),
+    const CamerasScreen(), // <-- новый таб
     const SettingsScreen(),
   ];
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
-
-    final picovoiceState = ref.watch(picovoiceProvider);
-
-    ref.listen<PicovoiceState>(picovoiceProvider, (previous, next) {
-      if (next == PicovoiceState.listeningForCommand) {
-        _animationController.repeat(reverse: true);
-      } else {
-        if (_animationController.isAnimating) {
-          _animationController.stop();
-          _animationController.reset();
-        }
-      }
-    });
-
-    // >>> заголовки для AppBar по вкладкам (AI — без локализации)
-    final List<String> pageTitles = <String>[
-      localizations.homeTab,
-      localizations.devicesTab,
-      //   'AI', // <<< новая вкладка
-      localizations.scenariosTab,
-      localizations.settingsTab,
-    ];
+    final t = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),
-      appBar: AppBar(
-        title: Text(
-          pageTitles[_selectedIndex],
-          style: AppStyles.headline3(context),
-        ),
-        backgroundColor: AppColors.getBackgroundColor(context),
-        elevation: 0,
-        actions: [
-          IconButton(
-            iconSize: 28,
-            splashRadius: 24,
-            icon: ScaleTransition(
-              scale: _animation,
-              child: Icon(
-                picovoiceState == PicovoiceState.stopped
-                    ? Icons.mic_off_outlined
-                    : Icons.mic_outlined,
-                color:
-                    picovoiceState == PicovoiceState.listeningForCommand
-                        ? AppColors.primaryAccent
-                        : AppColors.getTextColor(context),
-              ),
-            ),
-            onPressed: () {
-              ref.read(picovoiceProvider.notifier).toggleListening();
-            },
-            tooltip: "Голосовое управление",
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.wifi_rounded,
-              color: AppColors.getTextColor(context),
-            ),
-            onPressed: () => context.push('/wifi-setup'),
-            tooltip: localizations.setupWifi,
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.notifications,
-              color: AppColors.getTextColor(context),
-            ),
-            onPressed: () => context.push('/notifications'),
-            tooltip: localizations.notificationsTitle,
-          ),
-          IconButton(
-            icon: Icon(Icons.person, color: AppColors.getTextColor(context)),
-            onPressed: () => context.push('/profile'),
-            tooltip: localizations.profileIcon,
-          ),
-        ],
-      ),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
 
-      // >>> нижняя навигация на 5 пунктов (AI с иконкой чат-бота)
+      // Без AppBar
+      body: SafeArea(
+        child: IndexedStack(index: _selectedIndex, children: _pages),
+      ),
+
+      // Нижняя навигация
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: const Icon(Icons.home_outlined),
             activeIcon: const Icon(Icons.home),
-            label: localizations.homeTab,
+            label: t.homeTab,
           ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.devices_other_outlined),
-            activeIcon: const Icon(Icons.devices_other),
-            label: localizations.devicesTab,
-          ),
-          //    BottomNavigationBarItem(
-          //     icon: const Icon(Icons.smart_toy_outlined), // <<< AI
-          //    activeIcon: const Icon(Icons.smart_toy),
-          //  label: 'AI',
-          // ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.playlist_add_check_outlined),
             activeIcon: const Icon(Icons.playlist_add_check),
-            label: localizations.scenariosTab,
+            label: t.scenariosTab, // раньше было devicesTab, теперь корректно
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.videocam_outlined),
+            activeIcon: const Icon(Icons.videocam),
+            label: 'Камеры', // при желании добавь в локализации cameraTab
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings_outlined),
             activeIcon: const Icon(Icons.settings),
-            label: localizations.settingsTab,
+            label: t.settingsTab,
           ),
         ],
         currentIndex: _selectedIndex,

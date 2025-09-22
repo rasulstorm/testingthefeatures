@@ -1,107 +1,107 @@
-// /appcolor.dart
+// lib/appColor.dart
+// --- FINAL CORRECTED VERSION (with glassGradient & getPrimaryTextColor) ---
+
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Основной фон приложения (очень темный, почти черный)
-  static const Color backgroundDark = Color(
-    0xFF121212,
-  ); // Deep charcoal / almost black
-  static const Color backgroundLight = Color(
-    0xFFF0F2F5,
-  ); // Light grey/off-white
+  // ===========================================================================
+  // Core Palette (Scandinavian Inspired)
+  // ===========================================================================
+  static const Color primaryAccent = Color(0xFF4A90E2);
+  static const Color secondaryAccent = Color(0xFF50E3C2);
 
-  static const Color cardBackgroundDark = Color(0xFF1F1F1F); // Dark grey
+  // Light Theme
+  static const Color backgroundLight = Color(0xFFF7F9FC);
   static const Color cardBackgroundLight = Colors.white;
+  static const Color textColorLight = Color(0xFF1B1B1B);
+  static const Color secondaryTextColorLight = Color(0xFF6E717A);
+  static const Color lightGreyLight = Color(0xFFAAB0B9);
+  static const Color borderGrayLight = Color(0xFFE8EAF0);
 
-  // Акцентный цвет (холодный синий для интерактивных элементов)
-  static const Color primaryAccent = Color(
-    0xFF00BFFF,
-  ); // Deep Sky Blue - яркий, но не кричащий
-  // Вторичный акцентный цвет (может быть светло-зеленый или мятный для     успеха/доп.индикаторов)
-  static const Color secondaryAccent = Color(
-    0xFF00E676,
-  ); // Emerald Green - для статусов
-  // Цвет текста
-  static const Color textColorDark = Colors.white;
-  static const Color secondaryTextColorDark = Colors.white70;
-  static const Color lightGreyDark = Colors.white54;
-  static const Color borderGrayDark = Color(0xFF424242); // Для рамок
+  // Dark Theme
+  static const Color backgroundDark = Color(0xFF161B22);
+  static const Color cardBackgroundDark = Color(0xFF21262D);
+  static const Color textColorDark = Color(0xFFE6EDF3);
+  static const Color secondaryTextColorDark = Color(0xFF8B949E);
+  static const Color lightGreyDark = Color(0xFF6E717A);
+  static const Color borderGrayDark = Color(0xFF30363D);
 
-  static const Color textColorLight = Colors.black87;
-  static const Color secondaryTextColorLight = Colors.black54;
-  static const Color lightGreyLight = Colors.grey;
-  static const Color borderGrayLight = Color(
-    0xFFE0E0E0,
-  ); // Для рамок в светлой теме
-
-  // Цвета для индикаторов состояния
-  static const Color success = Color(0xFF4CAF50);
+  // Semantic Colors
+  static const Color success = Color(0xFF28A745);
   static const Color warning = Color(0xFFFFC107);
-  static const Color error = Color(0xFFF44336);
+  static const Color error = Color(0xFFDC3545);
 
-  // Градиенты для фона / элементов (более холодные тона)
+  // ===========================================================================
+  // Gradients
+  // ===========================================================================
   static const Gradient primaryGradient = LinearGradient(
-    colors: [
-      Color(0xFF00BFFF),
-      Color(0xFF1E90FF),
-    ], // От Deep Sky Blue к Dodger Blue
+    colors: [primaryAccent, Color(0xFF50E3C2)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
   static const Gradient cardGradientDark = LinearGradient(
-    colors: [
-      Color(0xFF2F2F2F),
-      Color(0xFF1F1F1F),
-    ], // От более светлого серого к более темному
+    colors: [Color(0xFF2A2F37), Color(0xFF21262D)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
   static const Gradient cardGradientLight = LinearGradient(
-    colors: [Color(0xFFFBFBFB), Color(0xFFF0F0F0)],
+    colors: [Colors.white, Color(0xFFFDFEFF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // Методы для получения цвета в зависимости от темы
-  static Color getBackgroundColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? backgroundDark
-        : backgroundLight;
-  }
+  // ===========================================================================
+  // Theme-aware Helper Methods
+  // ===========================================================================
+  static bool isDarkMode(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
 
-  static Color getCardBackgroundColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? cardBackgroundDark
-        : cardBackgroundLight;
-  }
+  static Color getBackgroundColor(BuildContext context) =>
+      isDarkMode(context) ? backgroundDark : backgroundLight;
 
-  static Color getTextColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? textColorDark
-        : textColorLight;
-  }
+  static Color getCardBackgroundColor(BuildContext context) =>
+      isDarkMode(context) ? cardBackgroundDark : cardBackgroundLight;
 
-  static Color getSecondaryTextColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? secondaryTextColorDark
-        : secondaryTextColorLight;
-  }
+  /// Base text color
+  static Color getTextColor(BuildContext context) =>
+      isDarkMode(context) ? textColorDark : textColorLight;
 
-  static Color getLightGreyColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? lightGreyDark
-        : lightGreyLight;
-  }
+  /// Alias used by widgets (fix for missing method)
+  static Color getPrimaryTextColor(BuildContext context) =>
+      getTextColor(context);
 
-  static Color getBorderGrayColor(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? borderGrayDark
-        : borderGrayLight;
-  }
+  static Color getSecondaryTextColor(BuildContext context) =>
+      isDarkMode(context) ? secondaryTextColorDark : secondaryTextColorLight;
 
-  static Gradient getCardGradient(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark
-        ? cardGradientDark
-        : cardGradientLight;
-  }
+  static Color getLightGreyColor(BuildContext context) =>
+      isDarkMode(context) ? lightGreyDark : lightGreyLight;
+
+  static Color getBorderGrayColor(BuildContext context) =>
+      isDarkMode(context) ? borderGrayDark : borderGrayLight;
+
+  static Gradient getCardGradient(BuildContext context) =>
+      isDarkMode(context) ? cardGradientDark : cardGradientLight;
+
+  // Glassmorphism Helpers
+  static Color getGlassFillColor(BuildContext context) =>
+      isDarkMode(context)
+          ? Colors.white.withOpacity(0.08)
+          : Colors.white.withOpacity(0.6);
+
+  static Color getGlassBorderColor(BuildContext context) =>
+      isDarkMode(context)
+          ? Colors.white.withOpacity(0.15)
+          : Colors.white.withOpacity(0.3);
+
+  // Subtle glass gradient for cards
+  static Gradient glassGradient(BuildContext context) => LinearGradient(
+    colors: [
+      getGlassFillColor(context),
+      getGlassFillColor(context).withOpacity(0.30),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

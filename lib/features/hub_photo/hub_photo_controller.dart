@@ -111,7 +111,7 @@ class HubPhotoController extends StateNotifier<HubPhotoState> {
     state = state.copyWith(loading: true, error: null);
     final normalized = _normalizeType(type);
 
-    Future<Response> _send(String t) async {
+    Future<Response> send(String t) async {
       final form = FormData.fromMap({
         'file': await MultipartFile.fromFile(file.path),
         'hubId': hubUuid,
@@ -124,14 +124,14 @@ class HubPhotoController extends StateNotifier<HubPhotoState> {
     try {
       Response res;
       try {
-        res = await _send(normalized);
+        res = await send(normalized);
       } on DioException catch (e) {
         final msg = e.response?.data?.toString() ?? e.message ?? '';
         // Если бэк говорит, что такого enum нет — попробуем нейтральный тип HUB
         final looksLikeEnumError =
             msg.contains('No enum constant') || msg.contains('enum');
         if (looksLikeEnumError && normalized != 'HUB') {
-          res = await _send('HUB');
+          res = await send('HUB');
         } else {
           rethrow;
         }

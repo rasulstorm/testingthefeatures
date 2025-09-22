@@ -3,10 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ISS/core/network/dio_provider.dart';
 import 'package:ISS/models/hub_models.dart';
 
-/// Если включён "семейный режим" (выбрана конкретная группа), можно продолжать
-/// использовать этот провайдер как раньше (если нужно).
-final activeFamilyGroupIdProvider = StateProvider<String?>((ref) => null);
-
 /// Обычные (личные) хабы пользователя
 final hubsProvider = FutureProvider.autoDispose<List<HubObject>>((ref) async {
   debugPrint("HUBS: обычный режим /mobile/hub/getByUser");

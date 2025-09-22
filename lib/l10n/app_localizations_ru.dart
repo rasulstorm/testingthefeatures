@@ -1414,6 +1414,217 @@ class AppLocalizationsRu extends AppLocalizations {
   String get memberDeletedSuccess => 'Участник успешно удален';
 
   @override
+  String get familyAccessPersonalModeActivated => 'Личный режим активирован';
+
+  @override
+  String get familyAccessSwitchToPersonal => 'Личный режим';
+
+  @override
+  String get familyAccessCreateGroup => 'Новая группа';
+
+  @override
+  String get familyAccessNoGroupsTitle => 'Групп пока нет';
+
+  @override
+  String get familyAccessNoGroupsMessage =>
+      'Создайте первую группу и пригласите близких';
+
+  @override
+  String get familyAccessCreateAction => 'Создать';
+
+  @override
+  String get familyAccessGroupNameLabel => 'Название группы';
+
+  @override
+  String get familyAccessInviteEmailsHint => 'Пригласить (email через запятую)';
+
+  @override
+  String get familyAccessAttachHubOptional => 'Привязать хаб (необязательно)';
+
+  @override
+  String get familyAccessAttachHubNone => '— без привязки —';
+
+  @override
+  String get familyAccessGroupCreated => 'Группа создана';
+
+  @override
+  String familyAccessGroupActivated(Object name) {
+    return 'Группа «$name» активирована';
+  }
+
+  @override
+  String familyAccessMembersCount(Object count) {
+    return 'Участников: $count';
+  }
+
+  @override
+  String get familyAccessGroupRenamed => 'Название обновлено';
+
+  @override
+  String get familyAccessRenameGroupTitle => 'Переименовать группу';
+
+  @override
+  String get familyAccessInviteMemberTitle => 'Пригласить участника';
+
+  @override
+  String get familyAccessInviteEmailLabel => 'Email участника';
+
+  @override
+  String get familyAccessRoleLabel => 'Роль';
+
+  @override
+  String get familyAccessInviteAction => 'Пригласить';
+
+  @override
+  String get familyAccessInvitationSent => 'Приглашение отправлено';
+
+  @override
+  String get familyAccessRoleUpdated => 'Роль обновлена';
+
+  @override
+  String familyAccessRemoveMemberTitle(Object name) {
+    return 'Удалить $name?';
+  }
+
+  @override
+  String get familyAccessRemoveMemberMessage =>
+      'Участник будет удалён из группы. Продолжить?';
+
+  @override
+  String get familyAccessMemberRemoved => 'Участник удалён';
+
+  @override
+  String get familyAccessNoTransferCandidates =>
+      'Нет участников для передачи прав';
+
+  @override
+  String get familyAccessTransferOwnershipTitle => 'Передать владение';
+
+  @override
+  String get familyAccessSelectMemberLabel => 'Выберите участника';
+
+  @override
+  String get familyAccessTransferAction => 'Передать';
+
+  @override
+  String get familyAccessOwnershipTransferred => 'Владение передано';
+
+  @override
+  String familyAccessDeleteGroupTitle(Object name) {
+    return 'Удалить группу «$name»?';
+  }
+
+  @override
+  String get familyAccessDeleteGroupMessage =>
+      'Группа и её настройки будут удалены безвозвратно.';
+
+  @override
+  String get familyAccessGroupDeleted => 'Группа удалена';
+
+  @override
+  String get familyAccessNoAttachableHubs => 'Нет доступных хабов для привязки';
+
+  @override
+  String get familyAccessAttachHubTitle => 'Привязать хаб';
+
+  @override
+  String get familyAccessSelectHubLabel => 'Выберите хаб';
+
+  @override
+  String get familyAccessAttachAction => 'Привязать';
+
+  @override
+  String get familyAccessHubAttached => 'Хаб привязан';
+
+  @override
+  String familyAccessDetachHubTitle(Object name) {
+    return 'Открепить «$name»?';
+  }
+
+  @override
+  String get familyAccessDetachHubMessage => 'Хаб будет удалён из этой группы.';
+
+  @override
+  String get familyAccessDetachAction => 'Открепить';
+
+  @override
+  String get familyAccessHubDetached => 'Хаб откреплён';
+
+  @override
+  String get familyAccessArmPinTitle => 'Введите PIN для постановки на охрану';
+
+  @override
+  String get familyAccessDisarmPinTitle => 'Введите PIN для снятия с охраны';
+
+  @override
+  String get familyAccessPinLabel => 'PIN-код';
+
+  @override
+  String familyAccessHubArmed(Object name) {
+    return 'Хаб «$name» на охране';
+  }
+
+  @override
+  String familyAccessHubDisarmed(Object name) {
+    return 'Хаб «$name» снят с охраны';
+  }
+
+  @override
+  String get familyAccessMyGroups => 'Мои группы';
+
+  @override
+  String get familyAccessSelectGroupHint =>
+      'Выберите группу для управления доступом, приглашениями и хабами.';
+
+  @override
+  String get familyAccessUseGroup => 'Использовать эту группу';
+
+  @override
+  String get familyAccessGroupActive => 'Группа активна';
+
+  @override
+  String get familyAccessRenameGroupTooltip => 'Переименовать';
+
+  @override
+  String get familyAccessActiveChip => 'В работе';
+
+  @override
+  String get familyAccessDeleteGroupButton => 'Удалить группу';
+
+  @override
+  String get familyAccessMembersTitle => 'Участники';
+
+  @override
+  String get familyAccessChangeRoleTooltip => 'Изменить роль';
+
+  @override
+  String get familyAccessRemoveMemberTooltip => 'Удалить участника';
+
+  @override
+  String get familyAccessInvitationsTitle => 'Отправленные приглашения';
+
+  @override
+  String get familyAccessHubsTitle => 'Хабы';
+
+  @override
+  String get familyAccessNoHubsLabel => 'В группе пока нет хабов';
+
+  @override
+  String get familyRoleOwner => 'Владелец';
+
+  @override
+  String get familyRoleAdmin => 'Администратор';
+
+  @override
+  String get familyRoleUser => 'Пользователь';
+
+  @override
+  String get familyRoleGuest => 'Гость';
+
+  @override
+  String get ok => 'OK';
+
+  @override
   String get addNewHub => 'Добавить новый хаб';
 
   @override
@@ -1673,4 +1884,128 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get genericSaved => 'Пинкод сохранен';
+
+  @override
+  String get homeMapTitle => 'Карта дома';
+
+  @override
+  String get homeMapFriendsButton => 'Друзья';
+
+  @override
+  String get homeMapFallback => 'Используем последние координаты';
+
+  @override
+  String get homeMapShowOffline => 'Показывать офлайн';
+
+  @override
+  String homeMapFriendsOnline(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# друзей онлайн',
+      many: '# друзей онлайн',
+      few: '# друга онлайн',
+      one: '# друг онлайн',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeMapStatusOnline => 'Онлайн';
+
+  @override
+  String get homeMapStatusOffline => 'Офлайн';
+
+  @override
+  String homeMapDistanceKm(String value) {
+    return 'До него $value км';
+  }
+
+  @override
+  String homeMapDistanceM(int value) {
+    return 'До него $value м';
+  }
+
+  @override
+  String get homeMapUpdatedNow => 'Обновлено только что';
+
+  @override
+  String homeMapUpdatedMinutes(int minutes) {
+    return 'Обновлено $minutes мин назад';
+  }
+
+  @override
+  String homeMapUpdatedHours(int hours) {
+    return 'Обновлено $hours ч назад';
+  }
+
+  @override
+  String homeMapUpdatedDays(int days) {
+    return 'Обновлено $days дн назад';
+  }
+
+  @override
+  String get homeMapActionRoute => 'Маршрут';
+
+  @override
+  String get homeMapActionMessage => 'Написать';
+
+  @override
+  String get homeMapActionCall => 'Позвонить';
+
+  @override
+  String get homeMapActionStub => 'Скоро доступно';
+
+  @override
+  String get homeMapPermissionTitle => 'Включите доступ к геопозиции';
+
+  @override
+  String get homeMapPermissionDescription =>
+      'Чтобы показывать вас и друзей на карте, дайте приложению доступ к местоположению.';
+
+  @override
+  String get homeMapOpenSettings => 'Открыть настройки';
+
+  @override
+  String get homeMapNoFriendsTitle =>
+      'Пригласите друга, чтобы видеть его на карте';
+
+  @override
+  String get homeMapInviteButton => 'Отправить заявку';
+
+  @override
+  String get homeMapErrorGeneric => 'Не удалось загрузить координаты';
+
+  @override
+  String get homeMapErrorUnauthorized => 'Нужно повторно войти';
+
+  @override
+  String get homeMapErrorForbidden => 'Доступ запрещён';
+
+  @override
+  String get homeMapErrorNotFound => 'Друг не найден';
+
+  @override
+  String get homeMapErrorConflict => 'Заявка уже создана';
+
+  @override
+  String get homeMapErrorPermission => 'Нужно разрешение на геопозицию';
+
+  @override
+  String get homeMapZoomIn => 'Zoom in';
+
+  @override
+  String get homeMapZoomOut => 'Zoom out';
+
+  @override
+  String get homeMapLocate => 'My location';
+
+  @override
+  String get homeMapFit => 'Show all markers';
+
+  @override
+  String get homeMapNoSelf => 'Current location unavailable';
+
+  @override
+  String get generalAllow => 'Разрешить';
 }

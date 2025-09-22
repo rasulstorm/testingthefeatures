@@ -1,36 +1,49 @@
 // lib/features/home/home_screen.dart
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:ISS/services/hub_service.dart';
+import 'widgets/device_grid_pro.dart';
 
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/l10n/app_localizations.dart';
-import 'package:ISS/core/network/dio_provider.dart';
 
-import 'package:ISS/features/voice/voice_mic_button.dart';
+import 'package:ISS/providers/hubs_provider.dart' as hubsr;
 import 'package:ISS/features/security_control/ws_provider.dart';
-
-import 'package:ISS/widgets/status_indicator_card.dart';
-import 'package:ISS/widgets/quick_action_button.dart';
-import 'package:ISS/widgets/control_device_card.dart';
+import 'package:ISS/services/picovoice_service.dart';
+import 'package:ISS/providers/selected_hub_provider.dart';
 
 import 'package:ISS/models/device_models.dart';
 import 'package:ISS/models/hub_models.dart';
-import 'package:ISS/utils/device_parser.dart';
 import 'package:ISS/utils/device_utils.dart';
+import 'package:ISS/services/weather_service.dart';
+import 'package:ISS/services/location_service.dart';
+import 'package:geolocator/geolocator.dart';
 
-import 'package:ISS/providers/selected_hub_provider.dart';
-import 'package:ISS/services/hub_service.dart';
-import 'package:ISS/providers/hubs_provider.dart' as hubsr;
+import 'home_types.dart';
+import 'home_controller.dart';
+import 'package:ISS/features/devices/device_catalog.dart';
+import 'package:ISS/features/devices/device_navigator.dart';
 
-// Фото хаба
+// widgets
 import 'package:ISS/features/hub_photo/hub_photo_controller.dart';
+import 'widgets/security_status_card.dart';
+import 'widgets/overview_grid.dart';
+import 'widgets/quick_actions_card.dart';
+import 'widgets/home_insight_cards.dart';
 
-enum PinType { disarm, duress }
+// sheets
+import 'sheets/security_sheet.dart';
+import 'sheets/pin_management_sheet.dart';
+import 'sheets/set_pins_sheet.dart';
+import 'sheets/change_pin_sheet.dart';
+import 'sheets/hub_selection_sheet.dart';
+import 'sheets/image_picker_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -38,27 +51,754 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _RoomSummary {
+  const _RoomSummary({required this.name, required this.count});
+  final String name;
+  final int count;
+}
+
+class _ClimateSnapshot {
+  const _ClimateSnapshot({this.temperature, this.humidity});
+  final double? temperature;
+  final double? humidity;
+}
+
+class _RoomChip extends StatelessWidget {
+  const _RoomChip({
+    required this.summary,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _RoomSummary summary;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAll = summary.name == 'Все';
+    final baseColor = AppColors.getCardBackgroundColor(context);
+    final gradientColors =
+        selected
+            ? const [Color(0xFF6C63FF), Color(0xFF46A6FF)]
+            : [
+              baseColor.withValues(alpha: 0.95),
+              baseColor.withValues(alpha: 0.78),
+            ];
+
+    final textColor =
+        selected ? Colors.white : AppColors.getPrimaryTextColor(context);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradientColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow:
+                selected
+                    ? [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.28),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                    : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                summary.name,
+                style: AppStyles.bodyText2(
+                  context,
+                ).copyWith(color: textColor, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      selected
+                          ? Colors.white.withValues(alpha: 0.24)
+                          : AppColors.getSecondaryTextColor(
+                            context,
+                          ).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  summary.count.toString(),
+                  style: AppStyles.caption(context).copyWith(
+                    color:
+                        selected
+                            ? Colors.white
+                            : AppColors.getPrimaryTextColor(
+                              context,
+                            ).withValues(alpha: isAll ? 0.9 : 0.8),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHeroSection extends StatelessWidget {
+  const _HomeHeroSection({
+    required this.hub,
+    required this.backgroundUrl,
+    required this.micAnimation,
+    required this.picovoiceState,
+    required this.onChangeHub,
+    required this.onToggleMic,
+    required this.onUploadPhoto,
+    required this.onOpenPins,
+    required this.onStartPairing,
+    required this.onDetach,
+    required this.onRename,
+    required this.totalDevices,
+    required this.onlineDevices,
+    required this.armed,
+  });
+
+  final HubObject hub;
+  final String? backgroundUrl;
+  final Animation<double> micAnimation;
+  final PicovoiceState picovoiceState;
+  final VoidCallback onChangeHub;
+  final VoidCallback onToggleMic;
+  final VoidCallback onUploadPhoto;
+  final VoidCallback onOpenPins;
+  final VoidCallback onStartPairing;
+  final VoidCallback onDetach;
+  final VoidCallback onRename;
+  final int totalDevices;
+  final int onlineDevices;
+  final bool armed;
+
+  @override
+  Widget build(BuildContext context) {
+    const gradient = LinearGradient(
+      colors: [Color(0xFF2E4EFF), Color(0xFF5169FF)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+    final textColor = Colors.white;
+    final secondary = Colors.white.withValues(alpha: 0.7);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(36),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(gradient: gradient),
+        child: Stack(
+          fit: StackFit.passthrough,
+          children: [
+            if (backgroundUrl != null && backgroundUrl!.isNotEmpty)
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.25,
+                  child: Image.network(
+                    backgroundUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
+                ),
+              )
+            else
+              Positioned(
+                right: -60,
+                top: -40,
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.12),
+                  ),
+                ),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.05),
+                    Colors.black.withValues(alpha: 0.35),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 240),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    GestureDetector(
+                      onTap: onChangeHub,
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Мой дом',
+                            style: AppStyles.caption(
+                              context,
+                            ).copyWith(color: secondary, letterSpacing: 0.6),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            hub.facilityName.isNotEmpty
+                                ? hub.facilityName
+                                : 'Без названия',
+                            style: AppStyles.headline2(context).copyWith(
+                              color: textColor,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (hub.address.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              hub.address,
+                              style: AppStyles.caption(
+                                context,
+                              ).copyWith(color: secondary),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _HeroCircleButton(
+                          onTap: onToggleMic,
+                          background: Colors.white.withValues(alpha: 0.18),
+                          child: ScaleTransition(
+                            scale: micAnimation,
+                            child: Icon(
+                              picovoiceState == PicovoiceState.stopped
+                                  ? Icons.mic_off_outlined
+                                  : Icons.mic_none_rounded,
+                              color:
+                                  picovoiceState ==
+                                          PicovoiceState.listeningForCommand
+                                      ? AppColors.secondaryAccent
+                                      : Colors.white,
+                            ),
+                          ),
+                        ),
+                        _HeroCircleButton(
+                          onTap: onUploadPhoto,
+                          background: Colors.white.withValues(alpha: 0.18),
+                          child: const Icon(
+                            Icons.camera_alt_outlined,
+                            color: Colors.white,
+                          ),
+                        ),
+                        _HeroMenuButton(
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'pins':
+                                onOpenPins();
+                                break;
+                              case 'pairing':
+                                onStartPairing();
+                                break;
+                              case 'rename':
+                                onRename();
+                                break;
+                              case 'detach':
+                                onDetach();
+                                break;
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            armed
+                                ? Icons.shield_rounded
+                                : Icons.shield_outlined,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            armed
+                                ? 'Система под охраной'
+                                : 'Система не активна',
+                            style: AppStyles.caption(
+                              context,
+                            ).copyWith(color: textColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final available = constraints.maxWidth;
+                        final double baseWidth =
+                            available >= 560
+                                ? (available - 32) / 3
+                                : (available - 12) / 2;
+                        final stats = <Widget>[
+                          SizedBox(
+                            width: baseWidth,
+                            child: _HeroStatTile(
+                              label: 'Устройства',
+                              value: totalDevices.toString(),
+                            ),
+                          ),
+                          SizedBox(
+                            width: baseWidth,
+                            child: _HeroStatTile(
+                              label: 'Онлайн',
+                              value: onlineDevices.toString(),
+                            ),
+                          ),
+                          SizedBox(
+                            width: baseWidth,
+                            child: _HeroStatTile(
+                              label: 'Комнат',
+                              value:
+                                  hub.rooms.isEmpty
+                                      ? '—'
+                                      : hub.rooms.length.toString(),
+                            ),
+                          ),
+                        ];
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: stats,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroCircleButton extends StatelessWidget {
+  const _HeroCircleButton({
+    required this.onTap,
+    required this.background,
+    required this.child,
+  });
+
+  final VoidCallback onTap;
+  final Color background;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: background,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(width: 46, height: 46, child: Center(child: child)),
+      ),
+    );
+  }
+}
+
+class _HeroMenuButton extends StatelessWidget {
+  const _HeroMenuButton({required this.onSelected});
+
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.18),
+      shape: const CircleBorder(),
+      child: PopupMenuButton<String>(
+        onSelected: onSelected,
+        color: AppColors.getCardBackgroundColor(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        itemBuilder:
+            (context) => const [
+              PopupMenuItem<String>(
+                value: 'pins',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.admin_panel_settings_outlined),
+                  title: Text('PIN-коды'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'pairing',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.leak_add_outlined),
+                  title: Text('Поиск устройств'),
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'rename',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Переименовать'),
+                ),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'detach',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.link_off, color: AppColors.error),
+                  title: Text(
+                    'Отвязать хаб',
+                    style: TextStyle(color: AppColors.error),
+                  ),
+                ),
+              ),
+            ],
+        icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _HeroStatTile extends StatelessWidget {
+  const _HeroStatTile({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: AppStyles.headline3(
+              context,
+            ).copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: AppStyles.caption(
+              context,
+            ).copyWith(color: Colors.white.withValues(alpha: 0.75)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShortcutItem {
+  const _ShortcutItem({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    this.route,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String? route;
+}
+
+class _HomeShortcutStrip extends StatelessWidget {
+  const _HomeShortcutStrip({required this.items, this.onTap});
+
+  final List<_ShortcutItem> items;
+  final void Function(_ShortcutItem item)? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 92,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (context, _) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          return _ShortcutTile(item: item, onTap: onTap);
+        },
+      ),
+    );
+  }
+}
+
+class _ShortcutTile extends StatelessWidget {
+  const _ShortcutTile({required this.item, this.onTap});
+
+  final _ShortcutItem item;
+  final void Function(_ShortcutItem item)? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cardColor = AppColors.getCardBackgroundColor(context);
+    final shadowColor = Theme.of(context).shadowColor.withValues(alpha: 0.05);
+
+    return GestureDetector(
+      onTap: onTap == null ? null : () => onTap!(item),
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: shadowColor,
+              blurRadius: 12,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(item.icon, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppStyles.bodyText1(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppStyles.caption(
+                      context,
+                    ).copyWith(color: AppColors.getSecondaryTextColor(context)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+_ClimateSnapshot _extractClimateSnapshot(List<DeviceCardVm> cards) {
+  for (final vm in cards) {
+    if (vm.kind == DeviceUiKind.climate) {
+      final temperature = (vm.extra['temperature'] as num?)?.toDouble();
+      final humidity = (vm.extra['humidity'] as num?)?.toDouble();
+      return _ClimateSnapshot(temperature: temperature, humidity: humidity);
+    }
+  }
+  return const _ClimateSnapshot();
+}
+
+bool _isDeviceActiveVm(DeviceCardVm vm) {
+  if (vm.disconnected) return false;
+  final on = vm.extra['on'];
+  if (on is bool) return on;
+  final state = vm.extra['state'];
+  if (state is String) {
+    final normalized = state.toLowerCase();
+    if (normalized == 'on' || normalized == 'open') return true;
+    if (normalized == 'off' || normalized == 'close') return false;
+  }
+  final status = vm.extra['status'];
+  if (status is String) {
+    final normalized = status.toLowerCase();
+    if (normalized.contains('alarm') ||
+        normalized.contains('open') ||
+        normalized.contains('motion') ||
+        normalized.contains('leak') ||
+        normalized.contains('vibration') ||
+        normalized.contains('occupied') ||
+        normalized == '1' ||
+        normalized == 'true') {
+      return true;
+    }
+  }
+  final brightness = vm.extra['brightness'];
+  if (brightness is num) return brightness > 0;
+  return !vm.disconnected;
+}
+
+Map<String, dynamic>? _buildTogglePayload(DeviceCardVm vm, bool nextState) {
+  switch (vm.kind) {
+    case DeviceUiKind.lightDimmer:
+    case DeviceUiKind.relay:
+      return {'state': nextState ? 'ON' : 'OFF'};
+    case DeviceUiKind.curtain:
+      return {'state': nextState ? 'open' : 'close'};
+    default:
+      return null;
+  }
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
   HubObject? _selectedHub;
+  String _selectedRoom = 'Все';
   bool _isSecurityActionLoading = false;
   final Map<String, bool> _armedOverrideByHubId = {};
+  WeatherInfo? _weatherInfo;
+  bool _weatherLoading = false;
+  String? _weatherHubId;
+  bool _locationAttempted = false;
+  ProviderSubscription<LocationState>? _locationSub;
+  final WeatherService _weatherService = WeatherService();
+
+  late final AnimationController _animationController;
+  late final Animation<double> _animation;
+
+  ProviderSubscription<PicovoiceState>? _picovoiceSub;
+
+  // PIN
+  final _pinInputFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(8),
+  ];
+  bool _isPinValid(String v) => v.isNotEmpty && v.length >= 4 && v.length <= 8;
+
+  late HomeController _controller;
 
   @override
   void initState() {
     super.initState();
-    // Если hubId уже сохранён — подключаемся сразу.
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 1.25).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    _controller = HomeController(ref: ref, context: context);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final savedHubId = ref.read(selectedHubIdProvider);
-      if (savedHubId != null && savedHubId.isNotEmpty) {
-        ref.read(webSocketNotifierProvider.notifier).connect(savedHubId);
-      }
+      _controller.connectInitialHub();
     });
+
+    _picovoiceSub = ref.listenManual<PicovoiceState>(picovoiceProvider, (
+      prev,
+      next,
+    ) {
+      if (!mounted) return;
+      if (next == PicovoiceState.listeningForCommand) {
+        _animationController.repeat(reverse: true);
+      } else {
+        if (_animationController.isAnimating) {
+          _animationController.stop();
+          _animationController.reset();
+        }
+      }
+    }, fireImmediately: true);
+
+    _locationSub = ref.listenManual<LocationState>(
+      locationStateProvider,
+      (prev, next) {
+        final prevPos = prev?.lastPosition;
+        final nextPos = next.lastPosition;
+        if (_selectedHub == null || nextPos == null) return;
+        final changed = prevPos == null ||
+            prevPos.latitude != nextPos.latitude ||
+            prevPos.longitude != nextPos.longitude;
+        if (changed) {
+          _fetchWeatherForHub(_selectedHub!);
+        }
+      },
+      fireImmediately: false,
+    );
   }
 
   @override
   void dispose() {
-    ref.read(webSocketNotifierProvider.notifier).disconnect();
+    _picovoiceSub?.close();
+    _animationController.dispose();
+    _locationSub?.close();
     super.dispose();
   }
 
@@ -76,515 +816,602 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  Map<String, dynamic>? _findLiveFor(
-    BaseDevice device,
-    Map<String, Map<String, dynamic>> liveMap,
-  ) {
-    final byId = liveMap[device.id];
-    if (byId != null) return byId;
-    final fn = (device.friendlyName ?? '').trim();
-    if (fn.isEmpty) return null;
-    return liveMap[fn];
-  }
+  BaseDevice _mergeLive(BaseDevice d, Map<String, Map<String, dynamic>> map) =>
+      _controller.mergeLive(d, map);
 
-  BaseDevice _mergeLive(
-    BaseDevice device,
-    Map<String, Map<String, dynamic>> liveMap,
-  ) {
-    final live = _findLiveFor(device, liveMap);
-    if (live == null) return device;
-    return DeviceParser.parse({...device.rawData, ...live});
-  }
-
-  void _shareHubDevicesOverWs(HubObject hub) {
-    final ws = ref.read(webSocketNotifierProvider.notifier);
-    final sent = <String>{};
-    for (final d in hub.devices) {
-      if (d.id.isNotEmpty && sent.add(d.id)) {
-        ws.sendShareDeviceData(hub.commandHubId, d.id);
-      }
-      final fn = (d.friendlyName ?? '').trim();
-      if (fn.isNotEmpty && sent.add(fn)) {
-        ws.sendShareDeviceData(hub.commandHubId, fn);
-      }
-    }
-  }
-
-  void _onHubChanged(HubObject newHub) {
+  Future<void> _onHubChanged(HubObject hub) async {
     if (!mounted) return;
-    setState(() => _selectedHub = newHub);
-
-    // Сохраняем выбранный hubId (commandHubId) как и раньше:
-    ref.read(selectedHubIdProvider.notifier).state = newHub.commandHubId;
-
-    // Пере-подключаем WS под нужный hubId:
-    final ws = ref.read(webSocketNotifierProvider.notifier);
-    ws.disconnect();
-    ws.connect(newHub.commandHubId);
-
-    // Отправляем SHARE подписки
-    _shareHubDevicesOverWs(newHub);
-
-    // Загружаем фото по UUID (hub.id)
-    ref.read(hubPhotoControllerProvider.notifier).loadForHub(newHub.id);
+    setState(() {
+      _selectedHub = hub;
+      _selectedRoom = 'Все';
+    });
+    await _controller.onHubChanged(hub);
+    if (!mounted) return;
+    await _fetchWeatherForHub(hub);
   }
 
   Future<void> _refreshHubs() async {
-    await ref.refresh(hubsr.hubsProvider.future);
+    await _controller.refreshHubs(_selectedHub);
     final hub = _selectedHub;
     if (hub != null) {
-      await ref.read(hubPhotoControllerProvider.notifier).loadForHub(hub.id);
+      await _fetchWeatherForHub(hub);
     }
   }
-
-  Future<void> _armSecurity(HubObject hub) async {
-    final loc = AppLocalizations.of(context);
-    setState(() {
-      _isSecurityActionLoading = true;
-      _setArmedOverride(hub.commandHubId, true);
-    });
-    try {
-      await dio.post('/hub/${hub.commandHubId}/arm-security');
-      _showSuccessSnackBar(loc.securityArmed);
-      await _refreshHubs();
-      _setArmedOverride(hub.commandHubId, null);
-    } catch (e) {
-      _setArmedOverride(hub.commandHubId, false);
-      _handleApiError(e, fallback: 'Не удалось поставить на охрану');
-    } finally {
-      if (mounted) setState(() => _isSecurityActionLoading = false);
-    }
-  }
-
-  Future<void> _disarmSecurity(HubObject hub, String pin) async {
-    final loc = AppLocalizations.of(context);
-    setState(() {
-      _isSecurityActionLoading = true;
-      _setArmedOverride(hub.commandHubId, false);
-    });
-    try {
-      await dio.post(
-        '/hub/${hub.commandHubId}/disarm-security',
-        data: {'pin': pin},
-      );
-      _showSuccessSnackBar(loc.securityDisarmed);
-      await _refreshHubs();
-      _setArmedOverride(hub.commandHubId, null);
-    } catch (e) {
-      _setArmedOverride(hub.commandHubId, true);
-      _handleApiError(e, fallback: 'Не удалось снять с охраны');
-    } finally {
-      if (mounted) setState(() => _isSecurityActionLoading = false);
-    }
-  }
-
-  Future<void> _setPins(
-    HubObject hub, {
-    required String disarmPin,
-    required String duressPin,
-  }) async {
-    try {
-      await dio.post(
-        '/hub/${hub.commandHubId}/set-pins',
-        data: {'disarmPin': disarmPin, 'duressPin': duressPin},
-      );
-      _showSuccessSnackBar('PIN-коды сохранены');
-    } catch (e) {
-      _handleApiError(e, fallback: 'Не удалось сохранить PIN-коды');
-    }
-  }
-
-  Future<void> _changeDisarmPin(
-    HubObject hub, {
-    required String oldPin,
-    required String newPin,
-  }) async {
-    try {
-      await dio.put(
-        '/hub/${hub.commandHubId}/new-disarm-pin',
-        data: {'oldPin': oldPin, 'newPin': newPin},
-      );
-      _showSuccessSnackBar('PIN изменён');
-    } catch (e) {
-      _handleApiError(e, fallback: 'Не удалось изменить PIN');
-    }
-  }
-
-  Future<void> _changeDuressPin(
-    HubObject hub, {
-    required String oldPin,
-    required String newPin,
-  }) async {
-    try {
-      await dio.put(
-        '/hub/${hub.commandHubId}/new-duress-pin',
-        data: {'oldPin': oldPin, 'newPin': newPin},
-      );
-      _showSuccessSnackBar('Тревожный PIN изменён');
-    } catch (e) {
-      _handleApiError(e, fallback: 'Не удалось изменить тревожный PIN');
-    }
-  }
-
-  Future<void> _startPairing(String hubId) async {
-    final loc = AppLocalizations.of(context);
-    final service = ref.read(hubServiceProvider);
-    final ok = await service.startPairing(hubId);
-    if (!mounted) return;
-    ok
-        ? _showSuccessSnackBar(loc.pairingStartedSuccess)
-        : _showErrorSnackBar(loc.pairingStartedFailed);
-  }
-
-  Future<void> _detachHub(HubObject hub) async {
-    final loc = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-    try {
-      await dio.post('/mobile/hub/${hub.id}/detach');
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      _showSuccessSnackBar(loc.hubDetachedSuccess);
-      await _refreshHubs();
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
-      _showErrorSnackBar(loc.hubDetachedFailed, e);
-    }
-  }
-
-  // ==== photo upload ====
 
   Future<void> _pickAndUploadHubPhoto(HubObject hub) async {
-    final picker = ImagePicker();
+    final ImageSource? source = await showImagePickerSheet(context);
+    if (!mounted || source == null) return;
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 2000,
+      maxHeight: 2000,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    await _controller.uploadHubPhoto(hub: hub, file: File(picked.path));
+  }
 
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder:
-          (_) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 12),
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.getSecondaryTextColor(context),
-                    borderRadius: BorderRadius.circular(2),
+  Future<bool> _toggleDevice({
+    required String hubId,
+    required DeviceCardVm vm,
+    required bool nextState,
+  }) async {
+    final payload = _buildTogglePayload(vm, nextState);
+    if (payload == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Для устройства недоступно переключение'),
+          ),
+        );
+      }
+      return false;
+    }
+
+    try {
+      final commandKey = vm.deviceId.trim();
+      if (commandKey.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Не удалось определить устройство')),
+          );
+        }
+        return false;
+      }
+
+      final ws = ref.read(webSocketNotifierProvider.notifier);
+      ws.updateDeviceLocalState(commandKey, payload);
+      await ws.sendDeviceCommand(hubId, commandKey, payload);
+      return true;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось отправить команду: $error')),
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> _fetchWeatherForHub(HubObject hub) async {
+    if (!mounted) return;
+    setState(() {
+      _weatherLoading = true;
+      _weatherHubId = hub.commandHubId;
+    });
+
+    WeatherInfo? info;
+    final locationState = ref.read(locationStateProvider);
+    Position? pos = locationState.lastPosition;
+
+    if (pos == null && !_locationAttempted) {
+      _locationAttempted = true;
+      try {
+        await ref
+            .read(locationStateProvider.notifier)
+            .requestPermissionAndSend();
+        pos = ref.read(locationStateProvider).lastPosition;
+      } catch (e) {
+        debugPrint('[Home] location request error: $e');
+      }
+    }
+
+    if (pos != null) {
+      info = await _weatherService.fetchWeatherByCoordinates(
+        pos.latitude,
+        pos.longitude,
+      );
+    }
+
+    if (info == null) {
+      final query = hub.address.isNotEmpty
+          ? hub.address
+          : (hub.space?.name ?? hub.facilityName);
+      if (query.trim().isNotEmpty) {
+        info = await _weatherService.fetchWeatherByQuery(query);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _weatherInfo = info;
+      _weatherLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final hubsAsyncValue = ref.watch(hubsr.hubsProvider);
+    final picovoiceState = ref.watch(picovoiceProvider);
+    final hubPhotoState = ref.watch(hubPhotoControllerProvider);
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: _buildBackgroundDecoration(context),
+        child: SafeArea(
+          bottom: false,
+          child: hubsAsyncValue.when(
+            data: (hubs) {
+              if (hubs.isEmpty) return _buildEmptyState(loc);
+
+              if (_selectedHub == null ||
+                  !hubs.any(
+                    (h) => h.commandHubId == (_selectedHub?.commandHubId ?? ''),
+                  )) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && hubs.isNotEmpty) _onHubChanged(hubs.first);
+                });
+              }
+
+              if (_selectedHub == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final currentHub = hubs.firstWhere(
+                (h) => h.commandHubId == _selectedHub!.commandHubId,
+                orElse: () => hubs.first,
+              );
+
+              final liveState = ref.watch(webSocketNotifierProvider);
+              final liveDataMap = liveState.deviceData;
+
+              final updatedDevices =
+                  currentHub.devices
+                      .map((d) => _mergeLive(d, liveDataMap))
+                      .toList();
+
+              final cards = buildDeviceCatalog(
+                devices: updatedDevices,
+                liveById: liveDataMap,
+              );
+
+              final climateSnapshot = _extractClimateSnapshot(cards);
+              final activeDevicesCount =
+                  cards.where((device) => _isDeviceActiveVm(device)).length;
+              final statusIndicators = DeviceUtils.createStatusIndicators(
+                updatedDevices,
+                loc,
+                context,
+              );
+
+              final isArmed = _effectiveArmed(
+                currentHub.commandHubId,
+                currentHub.onMonitoring,
+              );
+
+              final roomSummaries = _buildRoomSummaries(cards);
+              final effectiveRoom =
+                  roomSummaries.any((summary) => summary.name == _selectedRoom)
+                      ? _selectedRoom
+                      : 'Все';
+              final filteredCards =
+                  effectiveRoom == 'Все'
+                      ? cards
+                      : cards.where((device) {
+                        final room =
+                            device.roomName.trim().isEmpty
+                                ? 'Без комнаты'
+                                : device.roomName.trim();
+                        return room == effectiveRoom;
+                      }).toList();
+              final onlineDevices =
+                  cards.where((device) => !device.disconnected).length;
+              final backgroundUrl = hubPhotoState.url;
+
+              return RefreshIndicator(
+                onRefresh: _refreshHubs,
+                edgeOffset: 48,
+                color: AppColors.primaryAccent,
+                backgroundColor: AppColors.getCardBackgroundColor(context),
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _HomeHeroSection(
+                          hub: currentHub,
+                          backgroundUrl: backgroundUrl,
+                          micAnimation: _animation,
+                          picovoiceState: picovoiceState,
+                          onChangeHub: () async {
+                            final chosen = await showHubSelectionSheet(
+                              context: context,
+                              hubs: hubs,
+                              selectedHubId:
+                                  _selectedHub?.commandHubId ??
+                                  ref.read(selectedHubIdProvider),
+                            );
+                            if (chosen != null) _onHubChanged(chosen);
+                          },
+                          onToggleMic:
+                              () =>
+                                  ref
+                                      .read(picovoiceProvider.notifier)
+                                      .toggleListening(),
+                          onUploadPhoto:
+                              () => _pickAndUploadHubPhoto(currentHub),
+                          onOpenPins: () => _openPinManagementSheet(currentHub),
+                          onStartPairing:
+                              () => _controller.startPairing(
+                                currentHub.commandHubId,
+                              ),
+                          onDetach: () => _controller.detachHub(currentHub),
+                          onRename:
+                              () => _showRenameHubDialog(context, currentHub),
+                          totalDevices: cards.length,
+                          onlineDevices: onlineDevices,
+                          armed: isArmed,
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                        child: Column(
+                          children: [
+                            HomeWeatherCard(
+                              temperature: _weatherInfo?.temperature ??
+                                  climateSnapshot.temperature,
+                              humidity: _weatherInfo?.humidity ??
+                                  climateSnapshot.humidity,
+                              description: _weatherInfo?.description,
+                              isLoading: _weatherLoading &&
+                                  _weatherHubId == currentHub.commandHubId,
+                              location:
+                                  (_weatherInfo?.locationName ??
+                                          currentHub.address)
+                                      .trim()
+                                      .isNotEmpty
+                                      ? (_weatherInfo?.locationName ??
+                                          currentHub.address)
+                                      : currentHub.facilityName,
+                            ),
+                            const SizedBox(height: 16),
+                            HomeEnergyCard(
+                              totalDevices: cards.length,
+                              activeDevices: activeDevicesCount,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                        child: SecurityStatusCard(
+                          isArmed: isArmed,
+                          isLoading: _isSecurityActionLoading,
+                          onPressed: () => _openSecuritySheet(currentHub),
+                        ),
+                      ),
+                    ),
+                    if (statusIndicators.isNotEmpty) ...[
+                      _buildSectionHeader(context, loc.homeOverview),
+                      OverviewGrid(indicators: statusIndicators),
+                    ],
+                    _buildSectionHeader(context, loc.quickActions),
+                    QuickActionsCard(
+                      commandHubId: currentHub.commandHubId,
+                      devices: updatedDevices,
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                        child: _HomeShortcutStrip(
+                          items: const [
+                            _ShortcutItem(
+                              title: 'Карта',
+                              subtitle: 'Зоны, камеры, маршруты',
+                              icon: Icons.map_outlined,
+                              route: '/home/map',
+                            ),
+                            _ShortcutItem(
+                              title: 'Доступ семьи',
+                              subtitle: 'Роли и приглашения',
+                              icon: Icons.people_alt_outlined,
+                              route: '/family/access',
+                            ),
+                            _ShortcutItem(
+                              title: 'Энергомонитор',
+                              subtitle: 'Статистика потребления',
+                              icon: Icons.bolt_outlined,
+                            ),
+                          ],
+                          onTap: (item) {
+                            if (item.route != null) {
+                              context.push(item.route!);
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${item.title} в разработке'),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    if (roomSummaries.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Комнаты',
+                                style: AppStyles.headline3(context),
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                height: 52,
+                                child: ListView.separated(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: roomSummaries.length,
+                                  separatorBuilder:
+                                      (context, _) => const SizedBox(width: 12),
+                                  itemBuilder: (context, index) {
+                                    final summary = roomSummaries[index];
+                                    return _RoomChip(
+                                      summary: summary,
+                                      selected: summary.name == effectiveRoom,
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedRoom = summary.name;
+                                        });
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    _buildSectionHeader(context, 'Устройства'),
+                    if (filteredCards.isNotEmpty)
+                      DeviceGridPro(
+                        cards: filteredCards,
+                        onTap: (vm) => openDeviceDetails(context, vm),
+                        onToggle:
+                            (vm, next) => _toggleDevice(
+                              hubId: currentHub.commandHubId,
+                              vm: vm,
+                              nextState: next,
+                            ),
+                      )
+                    else
+                      _buildEmptyTileSliver(
+                        context,
+                        effectiveRoom == 'Все'
+                            ? 'Пока нет устройств'
+                            : 'В этой комнате пока нет устройств',
+                      ),
+                    SliverToBoxAdapter(child: SizedBox(height: 48)),
+                  ],
+                ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error:
+                (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Ошибка: $err',
+                      textAlign: TextAlign.center,
+                      style: AppStyles.bodyText1(context),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.photo_camera_outlined),
-                  title: const Text('Камера'),
-                  onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- UI helpers ----------
+  SliverPadding _buildSectionHeader(BuildContext context, String title) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
+      sliver: SliverToBoxAdapter(
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 28,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF6C63FF), Color(0xFF46A6FF)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Галерея'),
-                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: AppStyles.headline3(context).copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.getPrimaryTextColor(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _buildBackgroundDecoration(BuildContext context) {
+    final isDark = AppColors.isDarkMode(context);
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors:
+            isDark
+                ? const [Color(0xFF0D1117), Color(0xFF161B22)]
+                : const [Color(0xFFF5F7FE), Color(0xFFDCE6FF)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+    );
+  }
+
+  List<_RoomSummary> _buildRoomSummaries(List<DeviceCardVm> cards) {
+    if (cards.isEmpty) {
+      return const [_RoomSummary(name: 'Все', count: 0)];
+    }
+
+    final Map<String, int> byRoom = {};
+    for (final card in cards) {
+      final key =
+          card.roomName.trim().isEmpty ? 'Без комнаты' : card.roomName.trim();
+      byRoom[key] = (byRoom[key] ?? 0) + 1;
+    }
+
+    final summaries =
+        byRoom.entries
+            .map((e) => _RoomSummary(name: e.key, count: e.value))
+            .toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
+
+    return [_RoomSummary(name: 'Все', count: cards.length), ...summaries];
+  }
+
+  Widget _buildEmptyState(AppLocalizations loc) {
+    return RefreshIndicator(
+      onRefresh: _refreshHubs,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 100),
+          Icon(
+            Icons.hub_outlined,
+            size: 64,
+            color: AppColors.getSecondaryTextColor(context),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            loc.noHubsFound,
+            textAlign: TextAlign.center,
+            style: AppStyles.headline3(context),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Подключите ваш хаб, чтобы управлять устройствами.',
+            textAlign: TextAlign.center,
+            style: AppStyles.bodyText2(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  SliverPadding _buildEmptyTileSliver(BuildContext context, String text) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      sliver: SliverToBoxAdapter(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: AppStyles.glassmorphicBoxDecoration(
+              context,
+            ).copyWith(borderRadius: BorderRadius.circular(16)),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: AppColors.getSecondaryTextColor(context),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(text, style: AppStyles.bodyText2(context)),
+                ),
               ],
             ),
           ),
-    );
-
-    if (!mounted || source == null) return;
-
-    try {
-      final picked = await picker.pickImage(
-        source: source,
-        maxWidth: 2000,
-        maxHeight: 2000,
-        imageQuality: 85,
-      );
-      if (picked == null) return;
-      final file = File(picked.path);
-
-      final ok = await ref
-          .read(hubPhotoControllerProvider.notifier)
-          .uploadForHub(
-            hubUuid: hub.id, // здесь hub.id (UUID)
-            file: file,
-            type: 'ROOM',
-            name: 'Главная обложка',
-          );
-      if (ok) {
-        _showSuccessSnackBar('Фото обновлено');
-      } else {
-        _showErrorSnackBar('Не удалось загрузить фото');
-      }
-    } on PlatformException catch (e) {
-      _showErrorSnackBar('Нет разрешения на камеру/файлы: ${e.message}');
-    } catch (e) {
-      _showErrorSnackBar('Ошибка выбора фото: $e');
-    }
-  }
-
-  // ==== UI helpers ====
-
-  void _handleApiError(Object error, {required String fallback}) {
-    try {
-      final status = (error as dynamic).response?.statusCode as int?;
-      String msg = fallback;
-      switch (status) {
-        case 400:
-          msg = 'Некорректный запрос';
-          break;
-        case 401:
-          msg = 'Не авторизован';
-          break;
-        case 403:
-          msg = 'Нет доступа';
-          break;
-        case 404:
-          msg = 'Хаб не найден';
-          break;
-        case 409:
-          msg = 'Конфликт. Возможно, неверный PIN или состояние уже изменено';
-          break;
-        default:
-          final data = (error as dynamic).response?.data;
-          final serverMsg =
-              (data is Map && data['message'] is String)
-                  ? data['message'] as String
-                  : null;
-          if (serverMsg != null && serverMsg.isNotEmpty) msg = serverMsg;
-      }
-      _showErrorSnackBar(msg);
-    } catch (_) {
-      _showErrorSnackBar(fallback);
-    }
-  }
-
-  void _showErrorSnackBar(String message, [dynamic error]) {
-    if (!mounted) return;
-    final text = '$message${error != null ? ' : $error' : ''}';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text), backgroundColor: AppColors.error),
+        ),
+      ),
     );
   }
-
-  void _showSuccessSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.success),
-    );
-  }
-
-  void _showRenameHubDialog(BuildContext context, HubObject hub) {
-    final loc = AppLocalizations.of(context);
-    final c = TextEditingController(text: hub.facilityName);
-    showDialog(
-      context: context,
-      builder:
-          (dCtx) => AlertDialog(
-            backgroundColor: AppColors.getCardBackgroundColor(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: AppStyles.borderRadiusAll(16),
-            ),
-            title: Text(
-              loc.renameHubTitle,
-              style: AppStyles.headline4(context),
-            ),
-            content: TextField(controller: c),
-            actions: [
-              const VoiceMicButton(),
-              TextButton(
-                onPressed: () => Navigator.pop(dCtx),
-                child: Text(loc.cancel),
-              ),
-              ElevatedButton(
-                style: AppStyles.primaryButtonStyle,
-                onPressed: () async {
-                  if (c.text.isEmpty) return;
-                  final service = ref.read(hubServiceProvider);
-                  final success = await service.renameHub(
-                    hub.commandHubId,
-                    c.text.trim(),
-                  );
-                  if (!mounted) return;
-                  Navigator.pop(dCtx);
-                  if (success) {
-                    _showSuccessSnackBar(loc.hubRenamedSuccess);
-                    await _refreshHubs();
-                  } else {
-                    _showErrorSnackBar(loc.hubRenamedFailed);
-                  }
-                },
-                child: const Text(
-                  'Сохранить',
-                  style: TextStyle(color: AppColors.textColorDark),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
-  void _showDetachConfirmationDialog(BuildContext context, HubObject hub) {
-    final loc = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder:
-          (dCtx) => AlertDialog(
-            backgroundColor: AppColors.getCardBackgroundColor(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: AppStyles.borderRadiusAll(16),
-            ),
-            title: Text(
-              loc.detachHubTitle,
-              style: AppStyles.headline4(context),
-            ),
-            content: Text(loc.detachHubConfirmation(hub.facilityName)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dCtx),
-                child: Text(loc.cancel),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dCtx);
-                  _detachHub(hub);
-                },
-                child: const Text(
-                  'Открепить',
-                  style: TextStyle(
-                    color: AppColors.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-    );
-  }
-
-  // ==== PIN sheets ====
-
-  final _pinInputFormatters = <TextInputFormatter>[
-    FilteringTextInputFormatter.digitsOnly,
-    LengthLimitingTextInputFormatter(8),
-  ];
-  bool _isPinValid(String v) => v.isNotEmpty && v.length >= 4 && v.length <= 8;
 
   void _openSecuritySheet(HubObject hub) {
-    final loc = AppLocalizations.of(context);
     final isArmed = _effectiveArmed(hub.commandHubId, hub.onMonitoring);
     final pinController = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder:
-          (_) => Padding(
-            padding: MediaQuery.of(
-              context,
-            ).viewInsets.add(const EdgeInsets.all(16)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _sheetGrabber(context),
-                Text(
-                  isArmed ? loc.disarm : loc.arm,
-                  style: AppStyles.headline3(
-                    context,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  isArmed
-                      ? 'Введите PIN для снятия с охраны'
-                      : 'Постановка на охрану не требует PIN.',
-                  style: AppStyles.bodyText2(context),
-                ),
-                const SizedBox(height: 16),
-                if (isArmed)
-                  TextField(
-                    controller: pinController,
-                    autofocus: true,
-                    obscureText: true,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: _pinInputFormatters,
-                    decoration: const InputDecoration(
-                      labelText: 'PIN (4–8 цифр)',
-                      filled: true,
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: AppStyles.primaryButtonStyle.copyWith(
-                      minimumSize: WidgetStateProperty.all(
-                        const Size(double.infinity, 50),
-                      ),
-                    ),
-                    onPressed:
-                        _isSecurityActionLoading
-                            ? null
-                            : () {
-                              if (isArmed) {
-                                final pin = pinController.text.trim();
-                                if (!_isPinValid(pin)) {
-                                  _showErrorSnackBar(
-                                    'Некорректный PIN (4–8 цифр)',
-                                  );
-                                  return;
-                                }
-                                Navigator.pop(context);
-                                _disarmSecurity(hub, pin);
-                              } else {
-                                Navigator.pop(context);
-                                _armSecurity(hub);
-                              }
-                            },
-                    icon:
-                        _isSecurityActionLoading
-                            ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.textColorDark,
-                              ),
-                            )
-                            : Icon(
-                              isArmed
-                                  ? Icons.lock_open_rounded
-                                  : Icons.security_rounded,
-                              color: AppColors.textColorDark,
-                            ),
-                    label: Text(
-                      isArmed ? loc.disarm : loc.arm,
-                      style: const TextStyle(color: AppColors.textColorDark),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _openPinManagementSheet(hub);
+          (_) => buildSecuritySheet(
+            context: context,
+            isArmed: isArmed,
+            isLoading: _isSecurityActionLoading,
+            pinController: pinController,
+            pinFormatters: _pinInputFormatters,
+            isPinValid: _isPinValid,
+            onArm:
+                () => _controller.armSecurity(
+                  hub,
+                  onStart: () {
+                    setState(() {
+                      _isSecurityActionLoading = true;
+                      _setArmedOverride(hub.commandHubId, true);
+                    });
                   },
-                  child: const Text('Управление PIN-кодами'),
+                  onFinally:
+                      () => setState(() => _isSecurityActionLoading = false),
+                  clearOverride:
+                      () => _setArmedOverride(hub.commandHubId, null),
+                  setOverrideOnError:
+                      () => _setArmedOverride(hub.commandHubId, false),
                 ),
-                const SizedBox(height: 12),
-              ],
-            ),
+            onDisarm:
+                (pin) => _controller.disarmSecurity(
+                  hub,
+                  pin: pin,
+                  onStart: () {
+                    setState(() {
+                      _isSecurityActionLoading = true;
+                      _setArmedOverride(hub.commandHubId, false);
+                    });
+                  },
+                  onFinally:
+                      () => setState(() => _isSecurityActionLoading = false),
+                  clearOverride:
+                      () => _setArmedOverride(hub.commandHubId, null),
+                  setOverrideOnError:
+                      () => _setArmedOverride(hub.commandHubId, true),
+                ),
+            onOpenPinManagement: () => _openPinManagementSheet(hub),
           ),
     );
   }
@@ -592,62 +1419,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _openPinManagementSheet(HubObject hub) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder:
-          (_) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _sheetGrabber(context),
-                  Row(
-                    children: [
-                      Text(
-                        'PIN-коды охраны',
-                        style: AppStyles.headline3(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _PinActionTile(
-                    icon: Icons.key_rounded,
-                    title: 'Назначить PIN-коды',
-                    subtitle: 'Основной и тревожный',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openSetPinsSheet(hub);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _PinActionTile(
-                    icon: Icons.lock_reset_rounded,
-                    title: 'Сменить основной PIN',
-                    subtitle: 'Изменить disarm PIN',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openChangePinSheet(hub, type: PinType.disarm);
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  _PinActionTile(
-                    icon: Icons.warning_amber_rounded,
-                    title: 'Сменить тревожный PIN',
-                    subtitle: 'Изменить duress PIN',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _openChangePinSheet(hub, type: PinType.duress);
-                    },
-                  ),
-                ],
-              ),
-            ),
+          (_) => buildPinManagementSheet(
+            context: context,
+            onSetPins: () {
+              Navigator.pop(context);
+              _openSetPinsSheet(hub);
+            },
+            onChangeDisarm: () {
+              Navigator.pop(context);
+              _openChangePinSheet(hub, type: PinType.disarm);
+            },
+            onChangeDuress: () {
+              Navigator.pop(context);
+              _openChangePinSheet(hub, type: PinType.duress);
+            },
           ),
     );
   }
@@ -658,64 +1446,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder:
-          (_) => Padding(
-            padding: MediaQuery.of(
-              context,
-            ).viewInsets.add(const EdgeInsets.all(16)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _sheetGrabber(context),
-                _sheetTitle(context, 'Назначить PIN-коды'),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: disarmCtrl,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: _pinInputFormatters,
-                  decoration: const InputDecoration(
-                    labelText: 'Основной PIN (disarm)',
-                  ),
+          (_) => buildSetPinsSheet(
+            context: context,
+            disarmCtrl: disarmCtrl,
+            duressCtrl: duressCtrl,
+            pinFormatters: _pinInputFormatters,
+            isPinValid: _isPinValid,
+            onSave:
+                (disarm, duress) => _controller.setPins(
+                  hub,
+                  disarmPin: disarm,
+                  duressPin: duress,
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: duressCtrl,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: _pinInputFormatters,
-                  decoration: const InputDecoration(
-                    labelText: 'Тревожный PIN (duress)',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: AppStyles.primaryButtonStyle,
-                    onPressed: () {
-                      final disarm = disarmCtrl.text.trim();
-                      final duress = duressCtrl.text.trim();
-                      if (!_isPinValid(disarm) || !_isPinValid(duress)) {
-                        _showErrorSnackBar('PIN должен быть 4–8 цифр');
-                        return;
-                      }
-                      Navigator.pop(context);
-                      _setPins(hub, disarmPin: disarm, duressPin: duress);
-                    },
-                    child: const Text(
-                      'Сохранить',
-                      style: TextStyle(color: AppColors.textColorDark),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
           ),
     );
   }
@@ -727,772 +1471,97 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         type == PinType.disarm
             ? 'Сменить основной PIN'
             : 'Сменить тревожный PIN';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder:
-          (_) => Padding(
-            padding: MediaQuery.of(
-              context,
-            ).viewInsets.add(const EdgeInsets.all(16)),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _sheetGrabber(context),
-                _sheetTitle(context, title),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: oldCtrl,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: _pinInputFormatters,
-                  decoration: const InputDecoration(labelText: 'Старый PIN'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: newCtrl,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: _pinInputFormatters,
-                  decoration: const InputDecoration(
-                    labelText: 'Новый PIN (4–8 цифр)',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: AppStyles.primaryButtonStyle,
-                    onPressed: () {
-                      final oldPin = oldCtrl.text.trim();
-                      final newPin = newCtrl.text.trim();
-                      if (!_isPinValid(oldPin) || !_isPinValid(newPin)) {
-                        _showErrorSnackBar('PIN должен быть 4–8 цифр');
-                        return;
-                      }
-                      Navigator.pop(context);
-                      if (type == PinType.disarm) {
-                        _changeDisarmPin(hub, oldPin: oldPin, newPin: newPin);
-                      } else {
-                        _changeDuressPin(hub, oldPin: oldPin, newPin: newPin);
-                      }
-                    },
-                    child: const Text(
-                      'Сохранить',
-                      style: TextStyle(color: AppColors.textColorDark),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
+          (_) => buildChangePinSheet(
+            context: context,
+            title: title,
+            oldCtrl: oldCtrl,
+            newCtrl: newCtrl,
+            pinFormatters: _pinInputFormatters,
+            isPinValid: _isPinValid,
+            onSave: (oldPin, newPin) {
+              if (type == PinType.disarm) {
+                _controller.changeDisarmPin(
+                  hub,
+                  oldPin: oldPin,
+                  newPin: newPin,
+                );
+              } else {
+                _controller.changeDuressPin(
+                  hub,
+                  oldPin: oldPin,
+                  newPin: newPin,
+                );
+              }
+            },
           ),
     );
   }
 
-  Widget _sheetGrabber(BuildContext context) => Container(
-    width: 40,
-    height: 4,
-    margin: const EdgeInsets.only(bottom: 16),
-    decoration: BoxDecoration(
-      color: AppColors.getSecondaryTextColor(context),
-      borderRadius: BorderRadius.circular(2),
-    ),
-  );
-
-  Widget _sheetTitle(BuildContext context, String title) => Text(
-    title,
-    style: AppStyles.headline3(context).copyWith(fontWeight: FontWeight.bold),
-  );
-
-  // ==== build ====
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final webSocketState = ref.watch(webSocketNotifierProvider);
-    final webSocketConnected = webSocketState.isConnected;
-
-    final AsyncValue<List<HubObject>> hubsAsyncValue = ref.watch(
-      hubsr.hubsProvider,
-    );
-
-    final hubPhotoState = ref.watch(hubPhotoControllerProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.getBackgroundColor(context),
-      body: hubsAsyncValue.when(
-        data: (hubs) {
-          if (hubs.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: _refreshHubs,
-              child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  const SizedBox(height: 60),
-                  Icon(
-                    Icons.hub_outlined,
-                    size: 64,
-                    color: AppColors.getSecondaryTextColor(context),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    loc.noHubsFound,
-                    textAlign: TextAlign.center,
-                    style: AppStyles.headline3(context),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Подключите ваш хаб, чтобы управлять устройствами.',
-                    textAlign: TextAlign.center,
-                    style: AppStyles.bodyText2(context),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (_selectedHub == null ||
-              !hubs.any((h) => h.commandHubId == _selectedHub!.commandHubId)) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              _onHubChanged(hubs.first);
-            });
-          }
-          if (_selectedHub == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final HubObject currentHub = hubs.firstWhere(
-            (h) => h.commandHubId == _selectedHub!.commandHubId,
-            orElse: () => hubs.first,
-          );
-
-          final liveDataMap = webSocketState.deviceData;
-          final updatedDevices =
-              currentHub.devices
-                  .map((d) => _mergeLive(d, liveDataMap))
-                  .toList();
-
-          final statusIndicators = DeviceUtils.createStatusIndicators(
-            updatedDevices,
-            loc,
-            context,
-          );
-
-          final controllableDevices = DeviceUtils.getControllableDevices(
-            updatedDevices,
-          );
-
-          final isArmed = _effectiveArmed(
-            currentHub.commandHubId,
-            currentHub.onMonitoring,
-          );
-
-          final buttonText = isArmed ? loc.disarm : loc.arm;
-          final buttonIcon =
-              isArmed ? Icons.lock_open_rounded : Icons.security_rounded;
-          final buttonBg =
-              isArmed
-                  ? AppColors.getCardBackgroundColor(context)
-                  : AppColors.primaryAccent;
-          final buttonFg =
-              isArmed ? AppColors.primaryAccent : AppColors.textColorDark;
-
-          final backgroundUrl = hubPhotoState.url; // уже с cache-bust
-
-          return RefreshIndicator(
-            onRefresh: _refreshHubs,
-            color: AppColors.primaryAccent,
-            backgroundColor: AppColors.getCardBackgroundColor(context),
-            child: CustomScrollView(
-              slivers: [
-                // ======= HEADER =======
-                SliverAppBar(
-                  expandedHeight: 220,
-                  floating: false,
-                  pinned: true,
-                  actions: [
-                    IconButton(
-                      icon: const Icon(Icons.camera_alt_outlined),
-                      tooltip: 'Обложка дома',
-                      onPressed: () => _pickAndUploadHubPhoto(currentHub),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.admin_panel_settings_outlined),
-                      tooltip: 'PIN-коды',
-                      onPressed: () => _openPinManagementSheet(currentHub),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.link_off),
-                      tooltip: loc.detachHub,
-                      onPressed:
-                          () => _showDetachConfirmationDialog(
-                            context,
-                            currentHub,
-                          ),
-                    ),
-                  ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    collapseMode: CollapseMode.parallax,
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (backgroundUrl != null)
-                          Image.network(
-                            backgroundUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (_, __, ___) => Container(
-                                  color: AppColors.getBackgroundColor(context),
-                                ),
-                          )
-                        else
-                          Image.asset(
-                            'assets/images/home_background.jpg',
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (_, __, ___) => Container(
-                                  color: AppColors.getBackgroundColor(context),
-                                ),
-                          ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withOpacity(0.2),
-                                Colors.black.withOpacity(0.35),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (hubPhotoState.loading)
-                          Container(
-                            color: Colors.black26,
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                      ],
-                    ),
-                    titlePadding: const EdgeInsets.only(
-                      left: 16,
-                      bottom: 10,
-                      right: 16,
-                    ),
-                    centerTitle: false,
-                    title: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        InkWell(
-                          onTap:
-                              () => _showRenameHubDialog(context, currentHub),
-                          borderRadius: AppStyles.borderRadiusAll(8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  currentHub.facilityName,
-                                  style: AppStyles.headline3(context).copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.edit,
-                                size: 16,
-                                color: Colors.white70,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                webSocketConnected
-                                    ? Icons.wifi
-                                    : Icons.wifi_off,
-                                size: 14,
-                                color:
-                                    webSocketConnected
-                                        ? Colors.lightGreenAccent
-                                        : Colors.redAccent,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                loc.status,
-                                style: AppStyles.caption(
-                                  context,
-                                ).copyWith(fontSize: 11, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ======= TOP ACTIONS =======
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed:
-                                _isSecurityActionLoading
-                                    ? null
-                                    : () {
-                                      if (isArmed) {
-                                        _openSecuritySheet(currentHub);
-                                      } else {
-                                        _armSecurity(currentHub);
-                                      }
-                                    },
-                            icon:
-                                _isSecurityActionLoading
-                                    ? SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: buttonFg,
-                                      ),
-                                    )
-                                    : Icon(buttonIcon, color: buttonFg),
-                            label: Text(
-                              buttonText,
-                              style: AppStyles.bodyText1(
-                                context,
-                              ).copyWith(color: buttonFg),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonBg,
-                              disabledBackgroundColor: buttonBg.withOpacity(
-                                0.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppStyles.borderRadiusAll(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12,
-                                horizontal: 16,
-                              ),
-                              elevation: 4,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        _buildIconButton(
-                          context,
-                          icon: Icons.leak_add_outlined,
-                          tooltip: loc.startPairing,
-                          onPressed:
-                              () => _startPairing(currentHub.commandHubId),
-                        ),
-                        const SizedBox(width: 12),
-                        _buildIconButton(
-                          context,
-                          icon: Icons.list_alt,
-                          tooltip: loc.selectHub,
-                          onPressed:
-                              () => _showHubSelectionBottomSheet(context, hubs),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ======= OVERVIEW =======
-                if (statusIndicators.isNotEmpty) ...[
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                    sliver: SliverToBoxAdapter(
-                      child: Text(
-                        loc.homeOverview,
-                        style: AppStyles.headline3(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                            childAspectRatio: 0.9,
-                          ),
-                      itemCount: statusIndicators.length,
-                      itemBuilder:
-                          (_, i) => CompactStatusIndicatorCard(
-                            indicator: statusIndicators[i],
-                          ),
-                    ),
-                  ),
-                ] else ...[
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                    sliver: SliverToBoxAdapter(
-                      child: _emptyTile(context, loc.noDataAvailable),
-                    ),
-                  ),
-                ],
-
-                // ======= QUICK ACTIONS =======
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      loc.quickActions,
-                      style: AppStyles.headline3(
-                        context,
-                      ).copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverToBoxAdapter(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: QuickActionButton(
-                            label: loc.switchAll,
-                            icon: Icons.power,
-                            onTap: () {
-                              final controllable =
-                                  DeviceUtils.getControllableDevices(
-                                    updatedDevices,
-                                  );
-                              final ws = ref.read(
-                                webSocketNotifierProvider.notifier,
-                              );
-                              final sent = <String>{};
-                              for (final d in controllable) {
-                                if (sent.add(d.id)) {
-                                  ws.sendDeviceCommand(
-                                    currentHub.commandHubId,
-                                    d.id,
-                                    {"state": "ON"},
-                                  );
-                                  ws.updateDeviceLocalState(d.id, {
-                                    'state': 'ON',
-                                  });
-                                }
-                              }
-                              _showSuccessSnackBar(loc.switchAllSuccess);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: QuickActionButton(
-                            label: loc.powerOffAll,
-                            icon: Icons.power_off,
-                            onTap: () {
-                              final controllable =
-                                  DeviceUtils.getControllableDevices(
-                                    updatedDevices,
-                                  );
-                              final ws = ref.read(
-                                webSocketNotifierProvider.notifier,
-                              );
-                              final sent = <String>{};
-                              for (final d in controllable) {
-                                if (sent.add(d.id)) {
-                                  ws.sendDeviceCommand(
-                                    currentHub.commandHubId,
-                                    d.id,
-                                    {"state": "OFF"},
-                                  );
-                                  ws.updateDeviceLocalState(d.id, {
-                                    'state': 'OFF',
-                                  });
-                                }
-                              }
-                              _showSuccessSnackBar(loc.powerOffAllSuccess);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // ======= DEVICES =======
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                  sliver: SliverToBoxAdapter(
-                    child: Text(
-                      loc.controllableDevices,
-                      style: AppStyles.headline3(
-                        context,
-                      ).copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                if (controllableDevices.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    sliver: SliverGrid.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 1.0,
-                          ),
-                      itemCount: controllableDevices.length,
-                      itemBuilder:
-                          (_, i) => ControlDeviceCard(
-                            device: controllableDevices[i],
-                            commandHubId: currentHub.commandHubId,
-                          ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    sliver: SliverToBoxAdapter(
-                      child: _emptyTile(context, loc.noControllableDevices),
-                    ),
-                  ),
-                const SliverToBoxAdapter(child: SizedBox(height: 28)),
-              ],
-            ),
-          );
-        },
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(color: AppColors.primaryAccent),
-            ),
-        error:
-            (err, _) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  '${loc.errorLoadingData}: $err',
-                  textAlign: TextAlign.center,
-                  style: AppStyles.bodyText1(
-                    context,
-                  ).copyWith(color: AppColors.error),
-                ),
-              ),
-            ),
-      ),
-    );
-  }
-
-  // ==== small widgets ====
-
-  Widget _emptyTile(BuildContext context, String text) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppStyles.cardDecoration(context).copyWith(
-        borderRadius: AppStyles.borderRadiusAll(12),
-        color: AppColors.getCardBackgroundColor(context),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: AppColors.getSecondaryTextColor(context),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text, style: AppStyles.bodyText2(context))),
-        ],
-      ),
-    );
-  }
-
-  void _showHubSelectionBottomSheet(
-    BuildContext context,
-    List<HubObject> hubs,
-  ) {
-    final loc = AppLocalizations.of(context);
-    final selectedId = ref.read(selectedHubIdProvider);
-
-    showModalBottomSheet(
+  void _showRenameHubDialog(BuildContext context, HubObject hub) {
+    final c = TextEditingController(text: hub.facilityName);
+    showDialog(
       context: context,
-      backgroundColor: AppColors.getCardBackgroundColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder:
-          (_) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      loc.selectHub,
-                      style: AppStyles.headline4(context),
-                    ),
-                  ),
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: hubs.length,
-                      separatorBuilder:
-                          (_, __) => Divider(
-                            color: AppColors.getBorderGrayColor(context),
-                            height: 1,
-                          ),
-                      itemBuilder: (_, i) {
-                        final hub = hubs[i];
-                        final isSelected =
-                            hub.commandHubId ==
-                            (selectedId ?? _selectedHub?.commandHubId);
-                        return ListTile(
-                          tileColor: AppColors.getCardBackgroundColor(context),
-                          title: Text(
-                            hub.facilityName,
-                            style: AppStyles.bodyText1(context).copyWith(
-                              color:
-                                  isSelected
-                                      ? AppColors.primaryAccent
-                                      : AppColors.getTextColor(context),
-                            ),
-                          ),
-                          subtitle: Text(
-                            hub.commandHubId,
-                            style: AppStyles.caption(context),
-                          ),
-                          trailing:
-                              isSelected
-                                  ? const Icon(
-                                    Icons.check_circle,
-                                    color: AppColors.primaryAccent,
-                                  )
-                                  : null,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppStyles.borderRadiusAll(12),
-                          ),
-                          onTap: () {
-                            _onHubChanged(hub);
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
+          (dCtx) => AlertDialog(
+            backgroundColor: AppColors.getCardBackgroundColor(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusAll(16),
+            ),
+            title: Text(
+              AppLocalizations.of(context).renameHubTitle,
+              style: AppStyles.headline4(context),
+            ),
+            content: TextField(
+              controller: c,
+              decoration: AppStyles.inputDecoration(
+                context: context,
+                hintText: 'Новое имя',
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dCtx),
+                child: Text(AppLocalizations.of(context).cancel),
+              ),
+              ElevatedButton(
+                style: AppStyles.primaryButtonStyle,
+                onPressed: () async {
+                  if (c.text.isEmpty) return;
+                  final messenger = ScaffoldMessenger.of(context);
+                  final locDialog = AppLocalizations.of(context);
+                  final navigator = Navigator.of(dCtx);
+                  final success = await ref
+                      .read(hubServiceProvider)
+                      .renameHub(hub.commandHubId, c.text.trim());
+                  if (!mounted) return;
+                  navigator.pop();
+                  if (success) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(locDialog.hubRenamedSuccess),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                    await _refreshHubs();
+                  } else {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(locDialog.hubRenamedFailed),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Сохранить'),
+              ),
+            ],
           ),
-    );
-  }
-
-  Widget _buildIconButton(
-    BuildContext context, {
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return Container(
-      decoration: AppStyles.cardDecoration(context).copyWith(
-        borderRadius: AppStyles.borderRadiusAll(12),
-        color: AppColors.getCardBackgroundColor(context),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.getTextColor(context)),
-        tooltip: tooltip,
-        onPressed: onPressed,
-      ),
-    );
-  }
-}
-
-class _PinActionTile extends StatelessWidget {
-  const _PinActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: AppStyles.borderRadiusAll(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: AppStyles.cardDecoration(context).copyWith(
-          borderRadius: AppStyles.borderRadiusAll(12),
-          color: AppColors.getCardBackgroundColor(context),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primaryAccent.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: AppColors.primaryAccent),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppStyles.bodyText1(
-                      context,
-                    ).copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: AppStyles.bodyText2(context)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded),
-          ],
-        ),
-      ),
     );
   }
 }

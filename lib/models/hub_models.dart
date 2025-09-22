@@ -72,16 +72,41 @@ class HubObject {
     final devicesJson = (json['devices'] as List?) ?? const [];
     final parsedDevices =
         devicesJson.map((d) {
-          final m = d as Map<String, dynamic>;
+          final m = Map<String, dynamic>.from(d as Map);
           final room = m['room'] as Map<String, dynamic>?;
+
+          final deviceId = (m['id'] ?? '').toString();
+          final name = (m['name'] ?? '').toString();
+          final title = (m['title'] ?? '').toString();
+          final category = (m['deviceCategory'] ?? '').toString();
+          final manufacturer = (m['manufacturer'] ?? '').toString();
+          final lastUpdate = m['lastUpdate'];
+          final friendly = name.isNotEmpty ? name : deviceId;
+
+          final raw =
+              <String, dynamic>{
+                  'deviceId': deviceId,
+                  'name': name,
+                  'title': title,
+                  'deviceCategory': category,
+                  'manufacturer': manufacturer,
+                  'lastUpdate': lastUpdate,
+                  'room': room,
+                  'roomName': room?['roomName'] ?? room?['name'],
+                  'controllable': m['controllable'],
+                  'type': category.isNotEmpty ? category : (m['type'] ?? ''),
+                }
+                ..addAll(m)
+                ..removeWhere((key, value) => value == null);
+
           return UnknownDevice(
-            id: (m['id'] ?? '').toString(),
-            friendlyName: (m['name'] ?? '').toString(),
-            model: (m['title'] ?? '').toString(), // если есть «красивое имя»
-            manufacturer: '',
+            id: deviceId,
+            friendlyName: friendly,
+            model: title.isNotEmpty ? title : category,
+            manufacturer: manufacturer,
             linkQuality: 0,
             battery: null,
-            rawData: <String, dynamic>{}, // телеметрии здесь нет
+            rawData: raw,
           );
         }).toList();
 

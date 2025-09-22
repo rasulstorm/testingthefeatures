@@ -8,11 +8,13 @@ import 'package:go_router/go_router.dart';
 import 'package:ISS/appColor.dart';
 import 'package:ISS/appstyles.dart';
 import 'package:ISS/l10n/app_localizations.dart';
+import 'package:ISS/features/friends/presentation/screens/friends_screen.dart';
 
 import 'package:ISS/main.dart'; // themeModeProvider, localeProvider, localAuthServiceProvider
 import 'package:ISS/features/payment/payment_screen.dart';
 import 'package:ISS/services/location_service.dart'; // locationStateProvider
 import 'package:permission_handler/permission_handler.dart'; // для openAppSettings
+import 'package:ISS/services/picovoice_service.dart'; // голос
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -44,8 +46,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _isLocalAuthEnabled = localAuthEnabled;
       _canAuthenticate = canAuth;
     });
-
-    // стейт локации сам подтянется из locationStateProvider (он восстанавливает флаг из SharedPreferences)
   }
 
   Future<void> _toggleTheme(bool dark) async {
@@ -174,9 +174,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (confirmed == true) {
-      // твой текущий delete-аккаунт-алгоритм можно оставить/вынести в сервис.
-      // Чтобы не раздувать ответ, опущу. Используй свою реализацию.
-      // Здесь просто заглушка:
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -186,50 +183,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  String _getLanguageName(String langCode, AppLocalizations localizations) {
+  String _getLanguageName(String langCode, AppLocalizations l) {
     switch (langCode) {
       case 'en':
-        return localizations.languageEnglish;
+        return l.languageEnglish;
       case 'ru':
-        return localizations.languageRussian;
+        return l.languageRussian;
       case 'kk':
-        return localizations.languageKazakh;
+        return l.languageKazakh;
       default:
-        return localizations.languageRussian;
+        return l.languageRussian;
     }
   }
 
-  void _showLanguageSelectionDialog(
-    BuildContext context,
-    AppLocalizations localizations,
-  ) {
+  void _showLanguageSelectionDialog(BuildContext context, AppLocalizations l) {
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: AppColors.getCardBackgroundColor(dialogContext),
           title: Text(
-            localizations.selectLanguage,
+            l.selectLanguage,
             style: AppStyles.headline4(dialogContext),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildLanguageOption(
-                dialogContext,
-                'en',
-                localizations.languageEnglish,
-              ),
-              _buildLanguageOption(
-                dialogContext,
-                'ru',
-                localizations.languageRussian,
-              ),
-              _buildLanguageOption(
-                dialogContext,
-                'kk',
-                localizations.languageKazakh,
-              ),
+              _buildLanguageOption(dialogContext, 'en', l.languageEnglish),
+              _buildLanguageOption(dialogContext, 'ru', l.languageRussian),
+              _buildLanguageOption(dialogContext, 'kk', l.languageKazakh),
             ],
           ),
         );
@@ -245,7 +227,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final currentLocale = ref.watch(localeProvider);
     final selected = currentLocale.languageCode == langCode;
     return ListTile(
-      tileColor: AppColors.getCardBackgroundColor(ctx),
+      tileColor: Colors.transparent,
       title: Text(
         langName,
         style: AppStyles.bodyText1(ctx).copyWith(
@@ -263,10 +245,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // ======== БЛОК ГЕОЛОКАЦИИ (НОВЫЙ) ========
+  // ======== ГЕОЛОКАЦИЯ ========
 
   Future<void> _toggleLocationTracking(bool isEnabled) async {
-    // Переключатель фоновой локации: просто дергаем провайдер — он сам сохранит флаг и запустит/остановит background_fetch.
     await ref
         .read(locationStateProvider.notifier)
         .setLocationTrackingEnabled(isEnabled);
@@ -282,15 +263,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ).showSnackBar(const SnackBar(content: Text('Геолокация отправлена.')));
     } catch (e) {
       if (!mounted) return;
-      // Покажем понятное сообщение и кнопку «Открыть настройки»
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Нет доступа к геолокации: $e'),
           action: SnackBarAction(
             label: 'Настройки',
-            onPressed: () {
-              openAppSettings();
-            },
+            onPressed: () => openAppSettings(),
           ),
         ),
       );
@@ -300,7 +278,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildLocationSection() {
-    final localizations = AppLocalizations.of(context);
+    final l = AppLocalizations.of(context);
     final locationState = ref.watch(locationStateProvider);
 
     final trackingOn = locationState.trackingEnabled;
@@ -313,11 +291,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           ListTile(
             title: Text(
-              localizations.locationTracking,
+              l.locationTracking,
               style: AppStyles.bodyText1(context),
             ),
             subtitle: Text(
-              trackingOn ? localizations.enabled : localizations.disabled,
+              trackingOn ? l.enabled : l.disabled,
               style: AppStyles.bodyText2(context),
             ),
             leading: Icon(
@@ -371,8 +349,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 style: AppStyles.bodyText1(context),
               ),
               subtitle: Text(
-                'lat: ${lastPos.latitude.toStringAsFixed(6)}, '
-                'lng: ${lastPos.longitude.toStringAsFixed(6)}',
+                'lat: ${lastPos.latitude.toStringAsFixed(6)}, lng: ${lastPos.longitude.toStringAsFixed(6)}',
                 style: AppStyles.bodyText2(context),
               ),
               leading: Icon(
@@ -403,13 +380,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  // ======== END БЛОК ГЕОЛОКАЦИИ ========
+  // ======== END ========
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context);
+    final l = AppLocalizations.of(context);
     final themeMode = ref.watch(themeModeProvider);
     final currentLocale = ref.watch(localeProvider);
+
+    // состояние голоса
+    final picovoiceState = ref.watch(picovoiceProvider);
+    final isVoiceOn = picovoiceState != PicovoiceState.stopped;
 
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),
@@ -422,7 +403,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                localizations.generalSection,
+                l.generalSection,
                 style: AppStyles.headline3(context),
               ),
             ),
@@ -433,14 +414,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Язык
                   ListTile(
                     title: Text(
-                      localizations.languageSetting,
+                      l.languageSetting,
                       style: AppStyles.bodyText1(context),
                     ),
                     subtitle: Text(
-                      _getLanguageName(
-                        currentLocale.languageCode,
-                        localizations,
-                      ),
+                      _getLanguageName(currentLocale.languageCode, l),
                       style: AppStyles.bodyText2(context),
                     ),
                     leading: Icon(
@@ -451,11 +429,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       Icons.chevron_right,
                       color: AppColors.getSecondaryTextColor(context),
                     ),
-                    onTap:
-                        () => _showLanguageSelectionDialog(
-                          context,
-                          localizations,
-                        ),
+                    onTap: () => _showLanguageSelectionDialog(context, l),
                   ),
                   Divider(
                     color: AppColors.getBorderGrayColor(context),
@@ -464,13 +438,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Тема
                   ListTile(
                     title: Text(
-                      localizations.themeSetting,
+                      l.themeSetting,
                       style: AppStyles.bodyText1(context),
                     ),
                     subtitle: Text(
-                      themeMode == ThemeMode.light
-                          ? localizations.lightTheme
-                          : localizations.darkTheme,
+                      themeMode == ThemeMode.light ? l.lightTheme : l.darkTheme,
                       style: AppStyles.bodyText2(context),
                     ),
                     leading: Icon(
@@ -489,15 +461,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   // Биометрия
                   ListTile(
                     title: Text(
-                      localizations.faceIdPinSettingTitle,
+                      l.faceIdPinSettingTitle,
                       style: AppStyles.bodyText1(context),
                     ),
                     subtitle: Text(
                       _canAuthenticate
-                          ? (_isLocalAuthEnabled
-                              ? localizations.enabled
-                              : localizations.disabled)
-                          : localizations.localAuthNotAvailable,
+                          ? (_isLocalAuthEnabled ? l.enabled : l.disabled)
+                          : l.localAuthNotAvailable,
                       style: AppStyles.bodyText2(context),
                     ),
                     leading: Icon(
@@ -516,6 +486,66 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 20),
 
+            // ----- Система -----
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text('Система', style: AppStyles.headline3(context)),
+            ),
+            Container(
+              decoration: AppStyles.cardDecoration(context),
+              child: Column(
+                children: [
+                  // Голосовое управление (микрофон)
+                  ListTile(
+                    title: const Text('Голосовое управление'),
+                    subtitle: Text(
+                      isVoiceOn
+                          ? (picovoiceState ==
+                                  PicovoiceState.listeningForCommand
+                              ? 'Ожидает команду'
+                              : 'Включено')
+                          : 'Выключено',
+                      style: AppStyles.bodyText2(context),
+                    ),
+                    leading: Icon(
+                      isVoiceOn ? Icons.mic_outlined : Icons.mic_off_outlined,
+                      color: AppColors.primaryAccent,
+                    ),
+                    trailing: Switch(
+                      value: isVoiceOn,
+                      onChanged:
+                          (_) =>
+                              ref
+                                  .read(picovoiceProvider.notifier)
+                                  .toggleListening(),
+                    ),
+                  ),
+                  Divider(
+                    color: AppColors.getBorderGrayColor(context),
+                    height: 1,
+                  ),
+                  // Wi-Fi setup
+                  _tile(
+                    title: l.setupWifi,
+                    icon: Icons.wifi_rounded,
+                    onTap: () => context.push('/wifi-setup'),
+                  ),
+                  Divider(
+                    color: AppColors.getBorderGrayColor(context),
+                    height: 1,
+                  ),
+                  // Уведомления
+                  _tile(
+                    title: l.notificationsTitle,
+                    icon: Icons.notifications,
+                    onTap: () => context.push('/notifications'),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // ----- Геолокация -----
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -525,11 +555,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
             const SizedBox(height: 20),
 
+            // ======== НОВЫЙ РАЗДЕЛ: СОЦИАЛЬНЫЕ (Друзья) ========
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text('Социальные', style: AppStyles.headline3(context)),
+            ),
+            Container(
+              decoration: AppStyles.cardDecoration(context),
+              child: Column(
+                children: [
+                  _tile(
+                    title: 'Друзья',
+                    icon: Icons.group_outlined,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FriendsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // ----- Аккаунт -----
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                localizations.accountSection,
+                l.accountSection,
                 style: AppStyles.headline3(context),
               ),
             ),
@@ -538,19 +595,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   _tile(
-                    title: localizations.profileSetting,
+                    title: l.profileSetting,
                     icon: Icons.person,
                     onTap: () => context.push('/profile'),
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.familyAccess,
+                    title: l.familyAccess,
                     icon: Icons.group,
-                    onTap: () => context.push('/family-groups'),
+                    onTap: () => context.push('/family/access'),
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.paymentMethods,
+                    title: l.paymentMethods,
                     icon: Icons.payment,
                     onTap: () {
                       Navigator.push(
@@ -563,19 +620,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.changePassword,
+                    title: l.changePassword,
                     icon: Icons.lock,
                     onTap: () => context.push('/change-password'),
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.deleteAccount,
+                    title: l.deleteAccount,
                     icon: Icons.delete,
                     onTap: _confirmDeleteAccount,
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.logoutSetting,
+                    title: l.logoutSetting,
                     icon: Icons.logout,
                     onTap: _confirmLogout,
                   ),
@@ -589,7 +646,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                localizations.supportSection,
+                l.supportSection,
                 style: AppStyles.headline3(context),
               ),
             ),
@@ -598,22 +655,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 children: [
                   _tile(
-                    title: localizations.helpSetting,
+                    title: l.helpSetting,
                     icon: Icons.help_outline,
                     onTap: () {},
                   ),
                   _divider(),
                   _tile(
-                    title: localizations.aboutAppSetting,
+                    title: l.aboutAppSetting,
                     icon: Icons.info_outline,
                     onTap: () => context.push('/about-us'),
                   ),
-                  //  _divider(),
-                  // _tile(
-                  //  title: "Голосовое управление",
-                  //   icon: Icons.mic,
-                  //   onTap: () => context.push('/voice-control'),
-                  //  ),
                 ],
               ),
             ),
@@ -623,8 +674,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Divider _divider() =>
-      Divider(color: AppColors.getBorderGrayColor(context), height: 1);
+  Divider _divider() => Divider(
+        color: AppColors.getBorderGrayColor(context).withOpacity(0.4),
+        height: 1,
+        thickness: 0.7,
+      );
 
   Widget _tile({
     required String title,
@@ -632,10 +686,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     VoidCallback? onTap,
   }) {
     return ListTile(
-      tileColor: AppColors.getCardBackgroundColor(context),
-      shape: RoundedRectangleBorder(
-        borderRadius: AppStyles.borderRadiusAll(12),
-      ),
+            tileColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: AppStyles.borderRadiusAll(12),
+            ),
       title: Text(title, style: AppStyles.bodyText1(context)),
       leading: Icon(icon, color: AppColors.primaryAccent),
       trailing:

@@ -5,18 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // legacy WS (security_control/ws_provider.dart)
 import 'package:ISS/features/security_control/ws_provider.dart'
     show webSocketNotifierProvider;
+import 'package:ISS/services/device_command_service.dart';
 
-// app-wide WS (services/websocket_service.dart)
-import 'package:ISS/services/websocket_service.dart' show appWebSocketProvider;
-
+/// Унифицированный интерфейс отправки команд устройствам.
 abstract class DeviceCommandSender {
   Future<void> setLight({
     required String hubId,
-    required String deviceId,
+    required String deviceId, // <- используем ID устройства
     required bool on,
   });
 }
 
+/// Провайдер отправителя команд (через наш legacy WS + HTTP командный сервис).
 final deviceCommandSenderProvider = Provider<DeviceCommandSender>((ref) {
   return _WsDeviceCommandSender(ref);
 });
@@ -26,13 +26,6 @@ class _WsDeviceCommandSender implements DeviceCommandSender {
   _WsDeviceCommandSender(this.ref);
 
   Future<void> _ensureConnected(String hubId) async {
-    // app WS (bool state = connected)
-    final appWsNotifier = ref.read(appWebSocketProvider.notifier);
-    final appWsConnected = ref.read(appWebSocketProvider);
-    if (!appWsConnected) {
-      await appWsNotifier.connect(hubId: hubId);
-    }
-
     // legacy WS (connect(hubId) как позиционный)
     final legacyWs = ref.read(webSocketNotifierProvider.notifier);
     await legacyWs.connect(hubId);
@@ -48,28 +41,25 @@ class _WsDeviceCommandSender implements DeviceCommandSender {
 
     final payload = {"type": "switch", "on": on, "value": on ? "ON" : "OFF"};
 
-    // Пытаемся через app WS
     try {
-      ref
-          .read(appWebSocketProvider.notifier)
-          .sendCommand(hubId, deviceId, payload);
-      debugPrint(
-        '[Voice] sendCommand(appWS): hub=$hubId device=$deviceId $payload',
-      );
-    } catch (e) {
-      debugPrint('[Voice] appWS sendCommand error: $e');
-    }
+      final legacyWs = ref.read(webSocketNotifierProvider.notifier);
 
-    // Дублируем через legacy WS (на всякий случай)
-    try {
-      ref
-          .read(webSocketNotifierProvider.notifier)
-          .sendDeviceCommand(hubId, deviceId, payload);
-      debugPrint(
-        '[Voice] sendDeviceCommand(legacyWS): hub=$hubId device=$deviceId $payload',
-      );
-    } catch (e) {
-      debugPrint('[Voice] legacyWS sendDeviceCommand error: $e');
+      // локально мгновенно обновляем UI по ключу устройства
+      legacyWs.updateDeviceLocalState(deviceId, {'state': on ? 'ON' : 'OFF'});
+
+      // отправляем команду через HTTP-слой (по deviceName)
+      await ref
+          .read(deviceCommandServiceProvider)
+          .sendCommand(
+            hubId: hubId,
+            deviceName: deviceId, // <- backend ждёт deviceName
+            payload: payload,
+          );
+
+      debugPrint('[Voice] HTTP DEVICE_COMMAND hub=$hubId deviceName=$deviceId');
+    } on DeviceCommandException catch (e) {
+      debugPrint('[Voice] sendCommand error: $e');
+      rethrow;
     }
   }
 }
